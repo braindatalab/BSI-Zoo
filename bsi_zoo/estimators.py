@@ -16,10 +16,10 @@ from sklearn.metrics import hamming_loss
 # from simulation.emd import emd_score
 
 
-def solver_lasso(Xw, y, alpha, max_iter):
+def solver_lasso(Lw, y, alpha, max_iter):
     model = linear_model.LassoLars(max_iter=max_iter, normalize=False,
                                    fit_intercept=False, alpha=alpha)
-    return model.fit(Xw, y).coef_.copy()
+    return model.fit(Lw, y).coef_.copy()
 
 
 def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
@@ -39,7 +39,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
         Constant that multiplies the L0.5 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : XXX
+    cov : noise covariance matrix
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -50,14 +50,14 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 
     Attributes
     ----------
-    coef_ : array, shape (n_features,)
-        Parameter vector (W in the cost function formula).
+    x : array, shape (n_sources,)
+        Parameter vector (x in the cost function formula).
     """
-    n_samples, n_features = L.shape
+    n_samples, n_sources = L.shape
 
-    coef_ = np.zeros(n_features)
-    weights = np.ones_like(coef_)
-    coef_old = coef_.copy()
+    x = np.zeros(n_sources)
+    weights = np.ones_like(x)
+    x_old = x.copy()
 
     loss_ = []
 
@@ -65,15 +65,15 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
     alpha = alpha_fraction * alpha_max
 
     for i in range(max_iter_reweighting):
-        Xw = L * weights
-        coef_ = solver_lasso(Xw, y, alpha, max_iter)
-        coef_ = coef_ * weights
-        err = abs(coef_ - coef_old).max()
-        err /= max(abs(coef_).max(), abs(coef_old).max(), 1.)
-        coef_old = coef_.copy()
-        weights = 2 * (abs(coef_) ** 0.5 + 1e-10)
-        obj = 0.5 * ((L @ coef_ - y) ** 2).sum() / n_samples
-        obj += (alpha * abs(coef_) ** 0.5).sum()
+        Lw = L * weights
+        x = solver_lasso(Lw, y, alpha, max_iter)
+        x = x * weights
+        err = abs(x - x_old).max()
+        err /= max(abs(x_old).max(), abs(x_old).max(), 1.)
+        x_old = x.copy()
+        weights = 2 * (abs(x) ** 0.5 + 1e-10)
+        obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
+        obj += (alpha * abs(x) ** 0.5).sum()
         loss_.append(obj)
         if err < tol and i:
             break
@@ -86,7 +86,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
                       ' may cause precision problems.',
                       ConvergenceWarning)
 
-    return coef_
+    return x
 
 
 # class IterativeL1(BaseEstimator, RegressorMixin):
