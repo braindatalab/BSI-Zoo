@@ -4,7 +4,6 @@ import os
 import setuptools  # noqa; we are using a setuptools namespace
 from setuptools import setup
 
-
 descr = """BSI Zoo"""
 
 version = None
@@ -22,9 +21,9 @@ DESCRIPTION = descr
 MAINTAINER = 'XXX XXX'
 MAINTAINER_EMAIL = 'XXX@XXX.fr'
 LICENSE = 'BSD (3-clause)'
-DOWNLOAD_URL = 'https://github.com/braindatalab/bsi_zoo.git'
+DOWNLOAD_URL = 'https://github.com/braindatalab/BSI-Zoo.git'
 VERSION = version
-URL = 'https://braindatalab.github.io/bsi_zoo'
+URL = 'https://github.com/braindatalab/BSI-Zoo'
 
 
 def package_tree(pkgroot):
