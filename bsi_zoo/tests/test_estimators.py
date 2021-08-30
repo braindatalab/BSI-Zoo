@@ -23,7 +23,7 @@ def test_reweighted_lasso():
 
 def test_iterative_L2():
     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_L2(L, y[:, 0], cov, alpha=0.1, maxiter=20)
+    x_hat = iterative_L2(L, y[:, 0], cov, alpha=0.01, maxiter=10)
     x = x[:, 0]
     
     np.testing.assert_array_equal(x != 0, x_hat != 0)
