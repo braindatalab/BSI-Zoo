@@ -21,3 +21,5 @@ def test_reweighted_lasso():
     x = x[:, 0]
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=1e-1)
+
+
