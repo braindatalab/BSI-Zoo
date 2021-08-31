@@ -185,41 +185,41 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
             
 #         self.coef_ = coef_
     
-# class IterativeL1_TypeII(BaseEstimator, RegressorMixin):
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
 
-#     def gprime(self, L_, coef, w, alpha):
-#         L_T = L_.T
-#         n_samples, _ = L_.shape
-#         w_mat = lambda w: np.diag(1. /w)
+def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
-#         x_mat = np.abs(np.diag(coef))
-#         noise_cov = alpha*np.eye(n_samples)
-#         proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w),x_mat)),L_T)
-#         signal_cov = noise_cov + proj_source_cov 
-#         sigmaY_inv = np.linalg.inv(signal_cov)           
+    def gprime(L_, coef, w, alpha):
+        L_T = L_.T
+        n_samples, _ = L_.shape
 
-#         return np.sqrt(np.diag(np.matmul(np.matmul(L_T,sigmaY_inv), L_)))
+        def w_mat(w):
+            return np.diag(1. / w)
 
-#     def fit(self, L, x):
-#         _, n_features = L.shape
-#         weights = np.ones(n_features)
+        x_mat = np.abs(np.diag(coef))
+        noise_cov = alpha * np.eye(n_samples)
+        proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)),
+                                    L_T)
+        signal_cov = noise_cov + proj_source_cov
+        sigmaY_inv = np.linalg.inv(signal_cov)
 
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
+        return np.sqrt(np.diag(np.matmul(np.matmul(L_T, sigmaY_inv), L_)))
 
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
-#             weights = self.gprime(L, coef_, weights, alpha)
-            
-#         self.coef_ = coef_
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(L, x, weights, alpha)
+
+    return x
 
 # class IterativeL2_TypeII(BaseEstimator, RegressorMixin):
 #     def __init__(self, alpha=0.2, maxiter=10):
