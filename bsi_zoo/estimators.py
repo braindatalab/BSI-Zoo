@@ -1,19 +1,8 @@
 import warnings
 
 import numpy as np
-import pandas as pd
-from scipy import linalg
-from mne.utils import logger, warn
-
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.metrics.pairwise import cosine_distances
-from sklearn.multioutput import MultiOutputRegressor
 from sklearn import linear_model
-
-from sklearn.metrics import hamming_loss
-# from simulation.emd import emd_score
 
 
 def solver_lasso(Lw, y, alpha, max_iter):
