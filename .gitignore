@@ -12,6 +12,7 @@ build
 .pydevproject
 .idea
 *.xml
+.vscode
 
 *cachedir/
 dist/
