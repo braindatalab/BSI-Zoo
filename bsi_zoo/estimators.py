@@ -151,39 +151,28 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
             
 #         self.coef_ = coef_
 
-# class IterativeSqrt(BaseEstimator, RegressorMixin):
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
+def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
+    
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+    eps = np.finfo(float).eps
+    
+    def gprime(w):
+        return 1. / (2. * np.sqrt(np.abs(w)) + eps)
+    
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+    
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
 
-#     def fit(self, L, x):
-#         # eps = 0.01
-#         eps = np.finfo(float).eps
-#         # L = StandardScaler().fit_transform(L)
-        
-#         g = lambda w: np.sqrt(np.abs(w))
-#         gprime = lambda w: 1. / (2. * np.sqrt(np.abs(w)) + eps)
-#         n_samples, n_features = L.shape
-#         weights = np.ones(n_features)
-
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-        
-# #         p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
-# #                   + alpha * np.sum(g(w))
-        
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
-
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
-#             weights = gprime(coef_)
-# #             print p_obj(coef_)  # should go down
-            
-#         self.coef_ = coef_
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, 
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(x)
+    
+    return x
     
 # class IterativeL1_TypeII(BaseEstimator, RegressorMixin):
 #     def __init__(self, alpha=0.2, maxiter=10):
