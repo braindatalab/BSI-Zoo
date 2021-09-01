@@ -6,14 +6,15 @@ from sklearn import linear_model
 
 
 def solver_lasso(Lw, y, alpha, max_iter):
-    model = linear_model.LassoLars(max_iter=max_iter, normalize=False,
-                                   fit_intercept=False, alpha=alpha)
+    model = linear_model.LassoLars(
+        max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+    )
     return model.fit(Lw, y).coef_.copy()
 
 
-def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
+def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
                      max_iter_reweighting=100, tol=1e-4):
-    """Reweighted Lasso estimator with L1 regularizer.
+   """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
         (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
@@ -63,7 +64,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
         x = solver_lasso(Lw, y, alpha, max_iter)
         x = x * weights
         err = abs(x - x_old).max()
-        err /= max(abs(x_old).max(), abs(x_old).max(), 1.)
+        err /= max(abs(x_old).max(), abs(x_old).max(), 1.0)
         x_old = x.copy()
         weights = 2 * (abs(x) ** 0.5 + 1e-10)
         obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
@@ -73,54 +74,78 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
             break
 
     if i == max_iter_reweighting - 1 and i:
-        warnings.warn('Reweighted objective did not converge.'
-                      ' You might want to increase '
-                      'the number of iterations of reweighting.'
-                      ' Fitting data with very small alpha'
-                      ' may cause precision problems.',
-                      ConvergenceWarning)
+        warnings.warn(
+            "Reweighted objective did not converge."
+            " You might want to increase "
+            "the number of iterations of reweighting."
+            " Fitting data with very small alpha"
+            " may cause precision problems.",
+            ConvergenceWarning,
+        )
 
     return x
 
 
-# class IterativeL1(BaseEstimator, RegressorMixin):
-#     """ 
-#     Regression estimator which uses LassoLars algorithm with given alpha
-#     normalized for each lead field L and x. 
-#     """
+def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative L1 estimator with L1 regularizer.
 
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+    
+    Which in the case of iterative l1, it boils down to::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
-#     def fit(self, L, x):
-#         # eps = 0.01
-#         eps = np.finfo(float).eps
-#         # L = StandardScaler().fit_transform(L)
-#         #   --- Adaptive Lasso for g(|X|) = log(|X| + eps) as a prior (reweithed - \ell_1) ----
-        
-#         g = lambda w: np.log(np.abs(w) + eps)
-#         gprime = lambda w: 1. / (np.abs(w) + eps)
-#         n_samples, n_features = L.shape
-#         weights = np.ones(n_features)
+    Iterative l1::
+        g(x_i) = log(|x_i| + epsilon)
+        w_i^(k+1) <-- [|x_i^(k)|+epsilon]
 
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-#         # p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
-# #                   + alpha * np.sum(g(w))
-        
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
 
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
-#             weights = gprime(coef_)
-#             # print p_obj(coef_)  # should go down
-            
-#         self.coef_ = coef_
+    Attributes
+    ----------
+    x : array, shape (n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+
+    """
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+    eps = np.finfo(float).eps
+
+    def gprime(w):
+        return 1.0 / (np.abs(w) + eps)
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(x)
+
+    return x
+
 
 # class IterativeL2(BaseEstimator, RegressorMixin):
 #     def __init__(self, alpha=0.2, maxiter=10):
@@ -131,7 +156,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         # eps = 0.01
 #         eps = np.finfo(float).eps
 #         # L = StandardScaler().fit_transform(L)
-        
+
 #         ##  --- Adaptive Lasso for g(|X|) = log(|X^2 + eps|) as a prior (reweithed - \ell_2) ----
 #         g = lambda w: np.log(np.abs((w ** 2) + eps))
 #         gprime = lambda w: 1. / ((w ** 2) + eps)
@@ -153,7 +178,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             coef_ = clf.coef_ / weights
 #             weights = gprime(coef_)
 #             #  print p_obj(coef_)  # should go down
-            
+
 #         self.coef_ = coef_
 
 # class IterativeSqrt(BaseEstimator, RegressorMixin):
@@ -165,7 +190,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         # eps = 0.01
 #         eps = np.finfo(float).eps
 #         # L = StandardScaler().fit_transform(L)
-        
+
 #         g = lambda w: np.sqrt(np.abs(w))
 #         gprime = lambda w: 1. / (2. * np.sqrt(np.abs(w)) + eps)
 #         n_samples, n_features = L.shape
@@ -173,10 +198,10 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 
 #         alpha_max = abs(L.T.dot(x)).max() / len(L)
 #         alpha = self.alpha * alpha_max
-        
+
 # #         p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
 # #                   + alpha * np.sum(g(w))
-        
+
 #         for k in range(self.maxiter):
 #             L_w = L / weights[np.newaxis, :]
 
@@ -187,9 +212,9 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             coef_ = clf.coef_ / weights
 #             weights = gprime(coef_)
 # #             print p_obj(coef_)  # should go down
-            
+
 #         self.coef_ = coef_
-    
+
 # class IterativeL1_TypeII(BaseEstimator, RegressorMixin):
 #     def __init__(self, alpha=0.2, maxiter=10):
 #         self.alpha = alpha
@@ -203,8 +228,8 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         x_mat = np.abs(np.diag(coef))
 #         noise_cov = alpha*np.eye(n_samples)
 #         proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w),x_mat)),L_T)
-#         signal_cov = noise_cov + proj_source_cov 
-#         sigmaY_inv = np.linalg.inv(signal_cov)           
+#         signal_cov = noise_cov + proj_source_cov
+#         sigmaY_inv = np.linalg.inv(signal_cov)
 
 #         return np.sqrt(np.diag(np.matmul(np.matmul(L_T,sigmaY_inv), L_)))
 
@@ -223,7 +248,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             clf.fit(L_w, x)
 #             coef_ = clf.coef_ / weights
 #             weights = self.gprime(L, coef_, weights, alpha)
-            
+
 #         self.coef_ = coef_
 
 # class IterativeL2_TypeII(BaseEstimator, RegressorMixin):
@@ -237,17 +262,17 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         w_mat = lambda w: np.diag(1 /w)
 #         noise_cov = alpha*np.eye(n_samples)
 #         proj_source_cov = np.matmul(np.matmul(L_,w_mat(w)),L_T)
-#         signal_cov = noise_cov + proj_source_cov 
-#         sigmaY_inv = np.linalg.inv(signal_cov) 
+#         signal_cov = noise_cov + proj_source_cov
+#         sigmaY_inv = np.linalg.inv(signal_cov)
 #         return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),np.diag(np.matmul(np.matmul(L_T,sigmaY_inv),L_))))
 
 #     def fit(self, L, x):
 #         # eps = 0.01
 #         eps = np.finfo(float).eps
 #         # L = StandardScaler().fit_transform(L)
-        
+
 #         ##  --- Adaptive Lasso for g(|X|) = log(|X^2 + eps|) as a prior (reweithed - \ell_2) ----
-        
+
 #         # g = lambda w: np.log(np.abs((w ** 2) + self.epsilon_update(L, w, alpha)))
 #         # gprime = lambda w: 1. / ((w ** 2) + self.epsilon_update(L, w, alpha))
 
@@ -274,13 +299,13 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             w_mat = lambda w: np.diag(1 /w)
 #             noise_cov = alpha*np.eye(n_samples)
 #             proj_source_cov = np.matmul(np.matmul(L,w_mat(weights)),L_T)
-#             signal_cov = noise_cov + proj_source_cov 
-#             sigmaY_inv = np.linalg.inv(signal_cov) 
+#             signal_cov = noise_cov + proj_source_cov
+#             sigmaY_inv = np.linalg.inv(signal_cov)
 #             epsilon = np.diag(w_mat(weights) - np.multiply((w_mat(weights**2)),np.diag(np.matmul(np.matmul(L_T,sigmaY_inv),L))))
 #             weights = 1. / ((coef_ ** 2) + epsilon )
 #             # weights = gprime(coef_)
 #             #  print p_obj(coef_)  # should go down
-            
+
 #         self.coef_ = coef_
 
 # class GammaMap(BaseEstimator, RegressorMixin):
@@ -300,22 +325,22 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         L_init = L
 #         x_init = x
 #         # L = StandardScaler().fit_transform(L)
-        
+
 #         n_sensors, n_sources = L.shape
 #         weights = np.zeros(n_sources)
 #         if gammas is None:
 #             gammas = np.ones(n_sources, dtype=np.float64)
-         
-#         # TODO: Initialize it with mathched fileter 
-#         # MATLAB CODE: 
+
+#         # TODO: Initialize it with mathched fileter
+#         # MATLAB CODE:
 # #       % L_sqaure = sum(L.^2,1);
-# #       % inv_L_sqaure = zeros(1,N); 
-# #       % L_nonzero_index = find(L_sqaure > 0); 
+# #       % inv_L_sqaure = zeros(1,N);
+# #       % L_nonzero_index = find(L_sqaure > 0);
 # #       % inv_L_sqaure(L_nonzero_index) = 1./L_sqaure(L_nonzero_index);
 # #       % w_filter = spdiags(inv_L_sqaure',0,N,N)*L';
 # #       % vec_init = mean(mean(w_filter * Y) .^2);
-# #       % gamma  = vec_init * ones(N,1); 
-        
+# #       % gamma  = vec_init * ones(N,1);
+
 #         # alpha_max = abs(L.T.dot(x)).max() / len(L)
 #         # alpha = self.alpha * alpha_max
 #         # alpha = self.alpha * np.cov(x)
@@ -328,7 +353,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         print(np.array(noise_covariance))
 #         alpha = np.mean(np.diag(noise_covariance))
 #         print('Alpha = %f'%alpha)
-        
+
 #         from scipy.linalg import fractional_matrix_power
 #         whiten_matrix = fractional_matrix_power(np.linalg.inv(noise_covariance), 0.5)
 #         print(whiten_matrix.shape)
@@ -342,7 +367,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         alpha /= x_normalize_constant
 #         L_normalize_constant = linalg.norm(L, ord=np.inf)
 #         L /= L_normalize_constant
-    
+
 #         n_active = n_sources
 #         active_set = np.arange(n_sources)
 #         gammas_full_old = gammas.copy()
@@ -377,20 +402,20 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             del SigmaY
 #             SigmaY_inv = np.dot(U / (S + eps), U.T)
 #             SigmaY_invL = np.dot(SigmaY_inv, L)
-#             A = np.dot(SigmaY_invL.T, x) 
+#             A = np.dot(SigmaY_invL.T, x)
 # #           x_active = gammas[:, None] * A
 
 #             L_inv = gammas[:, None] * np.dot(L.T,SigmaY_inv)
 #             x_active = np.dot(L_inv,x)
-        
-# ##            Learn the noise variance accordingto homoscedasstic Champagne. Uncomment when the conventional Champange works well.                                 
+
+# ##            Learn the noise variance accordingto homoscedasstic Champagne. Uncomment when the conventional Champange works well.
 # #             Sigma_w_diag = gammas * (1 - gammas * np.sum(L * SigmaY_invL, axis=0));
-# #             numer = linalg.norm(x - np.dot(L, x_active)) ** 2      
+# #             numer = linalg.norm(x - np.dot(L, x_active)) ** 2
 # #             denom = n_sensors - len(active_set) + np.sum(np.divide(Sigma_w_diag,gammas))
-# #             alpha = numer / denom;   
-            
+# #             alpha = numer / denom;
+
 #             if update_mode == 1:
-#                 # Expectation Maximization (EM) update 
+#                 # Expectation Maximization (EM) update
 #                 numer = gammas ** 2 * np.mean((A * A.conj()).real) \
 #                         + gammas * (1 - gammas * np.sum(L * SigmaY_invL, axis=0))
 #             elif update_mode == 2:
@@ -403,16 +428,16 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #                 denom = gammas * np.sum(L * SigmaY_invL, axis=0)
 #             elif update_mode == 4:
 #                 # LowSNR-BSI update
-#                 pass # TODO: Implement LowSNR-BSI that requires whitening the data with noise covariance. 
+#                 pass # TODO: Implement LowSNR-BSI that requires whitening the data with noise covariance.
 #             else:
 #                 raise ValueError('Invalid value for update_mode')
-            
+
 
 #             if denom is None:
 #                 gammas = numer
 #             else:
 #                 gammas = numer / np.maximum(denom_fun(denom),eps)
-                
+
 #             # compute convergence criterion
 #             gammas_full = np.zeros(n_sources, dtype=np.float64)
 #             gammas_full[active_set] = gammas
@@ -427,7 +452,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #                 logger.info('Iteration: %d\t active set size: %d\t convergence: '
 #                             '%0.3e' % (k, len(gammas), err))
 #                 last_size = len(gammas)
-            
+
 #             if breaking:
 #                 break
 
@@ -440,20 +465,20 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 # #         n_const = 1
 # #         n_const = np.sqrt(x_normalize_constant) / L_normalize_constant
 # #         x_active = n_const * gammas[:, None] * A
-    
+
 #         if len(active_set) == 0:
 #             raise Exception("No active dipoles found. alpha is too big.")
-    
+
 #         n_const = np.sqrt(x_normalize_constant) / L_normalize_constant
 #         weights[active_set] = n_const * x_active
-        
+
 # #         weights[active_set] = x_active
 #         coef_ = weights
-        
+
 # #         gammas_diag = spdiags(gammas_full,0,n_sources,n_sources)
 # #         L_inv = gammas_diag * np.dot(L_init.T,SigmaY_inv)
 # #         coef_ = np.dot(L_inv,x)
-        
+
 # #         gammas_diag = spdiags(gammas_full,0,n_sources,n_sources)
 # #         L_inv = gammas_diag * np.dot(L_init.T,SigmaY_inv)
 # #         L_inv /= L_normalize_constant
@@ -488,7 +513,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         import pickle
 #         noise_covariance = np.load("./data/test/data_grad_CC120264_450_3/covariance_generate_noise.pickel", allow_pickle=True)
 #         noise_covariance = (noise_covariance*1e24)/30
-        
+
 #         # from scipy.linalg import sqrtm
 #         # whiten_matrix = np.linalg.inv(sqrtm(noise_covariance))
 
@@ -632,7 +657,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #         import pickle
 #         noise_covariance = np.load("./data/test/data_grad_CC120264_450_3/covariance_generate_noise.pickel", allow_pickle=True)
 #         noise_covariance = (noise_covariance*1e24)/30
-        
+
 #         # from scipy.linalg import sqrtm
 #         # whiten_matrix = np.linalg.inv(sqrtm(noise_covariance))
 
@@ -654,8 +679,8 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 
 #         n_active = n_sources
 #         active_set = np.arange(n_sources)
-            
-#         self.alpha = np.mean(np.diag(noise_covariance)) 
+
+#         self.alpha = np.mean(np.diag(noise_covariance))
 #         gammas_full_old = gammas.copy()
 #         x_bar_old = weights
 
@@ -699,7 +724,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             C_M = np.dot(residual, residual.T) / n_samples
 #             # self.alpha = np.mean(np.diag(np.sqrt(np.divide(C_M, CMinv))))
 
-#             # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples      
+#             # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples
 #             # Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
 #             # alpha2 = np.mean(np.diag(Lambda))
 
@@ -741,7 +766,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 #             gammas_full = np.zeros(n_sources, dtype=np.float64)
 #             gammas_full[active_set] = gammas
 
-#             # compute the noise covariance 
+#             # compute the noise covariance
 
 
 #             err = (np.sum(np.abs(gammas_full - gammas_full_old)) /
