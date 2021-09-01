@@ -82,7 +82,40 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
 
 
 def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
-    # TODO: docstring
+    """Iterative L1 estimator with L1 regularizer.
+
+    NOTE (Basically simiar as reweighted lasso with an efficient implementation)
+
+    The optimization objective for Reweighted Lasso is::
+        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
+
+    Where::
+        ||x||_1 = sum_i sum_j |x_ij|
+
+    Parameters
+    ----------
+    L: array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
+
+    Attributes
+    ----------
+    x : array, shape (n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    """
 
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
