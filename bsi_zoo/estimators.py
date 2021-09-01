@@ -6,8 +6,9 @@ from sklearn import linear_model
 
 
 def solver_lasso(Lw, y, alpha, max_iter):
-    model = linear_model.LassoLars(max_iter=max_iter, normalize=False,
-                                   fit_intercept=False, alpha=alpha)
+    model = linear_model.LassoLars(
+        max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+    )
     return model.fit(Lw, y).coef_.copy()
 
 
@@ -16,19 +17,23 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
-        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_0.5
+        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
 
     Where::
-        ||x||_0.5 = sum_i sum_j sqrt|x_ij|
+        ||x||_1 = sum_i sum_j |x_ij|
 
     Parameters
     ----------
-    alpha : (float or array-like), shape (n_tasks)
-        Optional, default ones(n_tasks)
-        Constant that multiplies the L0.5 term. Defaults to 1.0
+    L: array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements 
+    cov : array, shape (n_sensors, n_sensors)
+        noise covariance matrix
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : noise covariance matrix
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -40,7 +45,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     Attributes
     ----------
     x : array, shape (n_sources,)
-        Parameter vector (x in the cost function formula).
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
     """
     n_samples, n_sources = L.shape
 
@@ -80,48 +85,106 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     return x
 
 
-# class IterativeL1(BaseEstimator, RegressorMixin):
-#     """
-#     Regression estimator which uses LassoLars algorithm with given alpha
-#     normalized for each lead field L and x.
-#     """
+def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative L1 estimator with L1 regularizer.
 
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+    
+    Which in the case of iterative l1, it boils down to::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
-#     def fit(self, L, x):
-#         # eps = 0.01
-#         eps = np.finfo(float).eps
-#         # L = StandardScaler().fit_transform(L)
-#         #   --- Adaptive Lasso for g(|X|) = log(|X| + eps) as a prior (reweithed - \ell_1) ----
+    Iterative l1::
+        g(x_i) = log(|x_i| + epsilon)
+        w_i^(k+1) <-- [|x_i^(k)|+epsilon]
 
-#         g = lambda w: np.log(np.abs(w) + eps)
-#         gprime = lambda w: 1. / (np.abs(w) + eps)
-#         n_samples, n_features = L.shape
-#         weights = np.ones(n_features)
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
 
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-#         # p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
-# #                   + alpha * np.sum(g(w))
+    Attributes
+    ----------
+    x : array, shape (n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+    eps = np.finfo(float).eps
 
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
+    def gprime(w):
+        return 1.0 / (np.abs(w) + eps)
 
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
-#             weights = gprime(coef_)
-#             # print p_obj(coef_)  # should go down
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
 
-#         self.coef_ = coef_
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(x)
+
+    return x
 
 
 def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative L1 estimator with L1 regularizer.
 
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+    
+    Which in the case of iterative l1, g(x_i) and w_i are define as follows::
+    Iterative l2::
+        g(x_i) = log(x_i^2 + epsilon)
+        w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
+
+    for solving the following problem:
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
+
+    Attributes
+    ----------
+    x : array, shape=(n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
     eps = np.finfo(float).eps
