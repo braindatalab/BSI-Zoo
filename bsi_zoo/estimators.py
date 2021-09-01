@@ -24,14 +24,14 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
 
     Parameters
     ----------
-    L: array, shape (n_sensors, n_sources)
+    L: array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape (n_sensors,)
+    y: array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
-    cov : array, shape (n_sensors, n_sensors)
+    cov : array, shape=(n_sensors, n_sensors)
         noise covariance matrix
     alpha : (float), 
-        Constant that multiplies the L1 term. Defaults to 1.0
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -44,7 +44,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
 
     Attributes
     ----------
-    x : array, shape (n_sources,)
+    x : array, shape=(n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
     """
     n_samples, n_sources = L.shape
@@ -105,7 +105,7 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     y: array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     alpha : (float), 
-        Constant that multiplies the L1 term. Defaults to 1.0
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
     cov : noise covariance matrix shape=(n_sensors,n_sensors)
@@ -145,12 +145,12 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     return x
 
 def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
-    """Iterative L1 estimator with L1 regularizer.
+    """Iterative L1 estimator with l2 regularizer.
 
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     
-    Which in the case of iterative l1, g(x_i) and w_i are define as follows::
+    Which in the case of iterative l2, g(x_i) and w_i are define as follows::
     Iterative l2::
         g(x_i) = log(x_i^2 + epsilon)
         w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
