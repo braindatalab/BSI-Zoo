@@ -23,11 +23,17 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
 
     Parameters
     ----------
+    L: array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements 
+    cov : array, shape (n_sensors, n_sensors)
+        noise covariance matrix
     alpha : (float), 
         Constant that multiplies the L1 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : noise covariance matrix
+
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -39,7 +45,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
     Attributes
     ----------
     x : array, shape (n_sources,)
-        Parameter vector (x in the cost function formula).
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
     """
     n_samples, n_sources = L.shape
 
