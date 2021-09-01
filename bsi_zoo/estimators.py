@@ -14,7 +14,7 @@ def solver_lasso(Lw, y, alpha, max_iter):
 
 def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
                      max_iter_reweighting=100, tol=1e-4):
-   """Reweighted Lasso estimator with L1 regularizer.
+    """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
         (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
@@ -34,7 +34,6 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
         Constant that multiplies the L1 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
-
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -124,7 +123,6 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
     
     References: 
-
     """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
