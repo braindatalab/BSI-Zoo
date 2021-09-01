@@ -14,22 +14,27 @@ def solver_lasso(Lw, y, alpha, max_iter):
 
 def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
                      max_iter_reweighting=100, tol=1e-4):
-    """Reweighted Lasso estimator with L1 regularizer.
+   """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
-        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_0.5
+        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
 
     Where::
-        ||x||_0.5 = sum_i sum_j sqrt|x_ij|
+        ||x||_1 = sum_i sum_j |x_ij|
 
     Parameters
     ----------
-    alpha : (float or array-like), shape (n_tasks)
-        Optional, default ones(n_tasks)
-        Constant that multiplies the L0.5 term. Defaults to 1.0
+    L: array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements 
+    cov : array, shape (n_sensors, n_sensors)
+        noise covariance matrix
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : noise covariance matrix
+
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -41,7 +46,7 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     Attributes
     ----------
     x : array, shape (n_sources,)
-        Parameter vector (x in the cost function formula).
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
     """
     n_samples, n_sources = L.shape
 
@@ -121,9 +126,6 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     References: 
 
     """
-
-
-
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
     eps = np.finfo(float).eps
