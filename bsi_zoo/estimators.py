@@ -221,62 +221,41 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
             
 #         self.coef_ = coef_
 
-# class IterativeL2_TypeII(BaseEstimator, RegressorMixin):
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
 
-#     def epsilon_update(self, L_, w, alpha):
-#         L_T = L_.T
-#         n_samples, _ = L_.shape
-#         w_mat = lambda w: np.diag(1 /w)
-#         noise_cov = alpha*np.eye(n_samples)
-#         proj_source_cov = np.matmul(np.matmul(L_,w_mat(w)),L_T)
-#         signal_cov = noise_cov + proj_source_cov 
-#         sigmaY_inv = np.linalg.inv(signal_cov) 
-#         return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),np.diag(np.matmul(np.matmul(L_T,sigmaY_inv),L_))))
+def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
-#     def fit(self, L, x):
-#         # eps = 0.01
-#         eps = np.finfo(float).eps
-#         # L = StandardScaler().fit_transform(L)
-        
-#         ##  --- Adaptive Lasso for g(|X|) = log(|X^2 + eps|) as a prior (reweithed - \ell_2) ----
-        
-#         # g = lambda w: np.log(np.abs((w ** 2) + self.epsilon_update(L, w, alpha)))
-#         # gprime = lambda w: 1. / ((w ** 2) + self.epsilon_update(L, w, alpha))
+    def epsilon_update(L, w, alpha):
+        L_T = L.T
+        n_samples, _ = L.shape
 
-#         g = lambda w: np.log(np.abs((w ** 2) + self.epsilon_update(L, weights, alpha)))
-#         gprime = lambda w: 1. / ((w ** 2) + self.epsilon_update(L, weights, alpha))
-#         _, n_features = L.shape
-#         weights = np.ones(n_features)
+        def w_mat(w):
+            return np.diag(1 / w)
 
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-#         # p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
-# #                   + alpha * np.sum(g(w))
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
+        noise_cov = alpha * np.eye(n_samples)
+        proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
+        signal_cov = noise_cov + proj_source_cov
+        sigmaY_inv = np.linalg.inv(signal_cov)
+        return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),
+                                              np.diag(np.matmul(np.matmul(L_T,
+                                                                sigmaY_inv),
+                                                                L))))
 
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
 
-#             n_samples, _ = L.shape
-#             L_T = L.T
-#             w_mat = lambda w: np.diag(1 /w)
-#             noise_cov = alpha*np.eye(n_samples)
-#             proj_source_cov = np.matmul(np.matmul(L,w_mat(weights)),L_T)
-#             signal_cov = noise_cov + proj_source_cov 
-#             sigmaY_inv = np.linalg.inv(signal_cov) 
-#             epsilon = np.diag(w_mat(weights) - np.multiply((w_mat(weights**2)),np.diag(np.matmul(np.matmul(L_T,sigmaY_inv),L))))
-#             weights = 1. / ((coef_ ** 2) + epsilon )
-#             # weights = gprime(coef_)
-#             #  print p_obj(coef_)  # should go down
-            
-#         self.coef_ = coef_
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        epsilon = epsilon_update(L, weights, alpha)
+        weights = 1. / ((x ** 2) + epsilon)
+
+    return x
 
 # class GammaMap(BaseEstimator, RegressorMixin):
 
