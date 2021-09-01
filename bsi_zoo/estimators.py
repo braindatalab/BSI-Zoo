@@ -16,16 +16,15 @@ def reweighted_lasso(L, y, cov, alpha_fraction=.01, max_iter=2000,
     """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
-        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_0.5
+        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
 
     Where::
-        ||x||_0.5 = sum_i sum_j sqrt|x_ij|
+        ||x||_1 = sum_i sum_j |x_ij|
 
     Parameters
     ----------
-    alpha : (float or array-like), shape (n_tasks)
-        Optional, default ones(n_tasks)
-        Constant that multiplies the L0.5 term. Defaults to 1.0
+    alpha : (float), 
+        Constant that multiplies the L1 term. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
     cov : noise covariance matrix
