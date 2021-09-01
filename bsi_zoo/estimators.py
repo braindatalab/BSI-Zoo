@@ -144,40 +144,65 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
 
     return x
 
+def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative L1 estimator with L1 regularizer.
 
-# class IterativeL2(BaseEstimator, RegressorMixin):
-#     def __init__(self, alpha=0.2, maxiter=10):
-#         self.alpha = alpha
-#         self.maxiter = maxiter
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+    
+    Which in the case of iterative l1, g(x_i) and w_i are define as follows::
+    Iterative l2::
+        g(x_i) = log(x_i^2 + epsilon)
+        w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
 
-#     def fit(self, L, x):
-#         # eps = 0.01
-#         eps = np.finfo(float).eps
-#         # L = StandardScaler().fit_transform(L)
+    for solving the following problem:
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
-#         ##  --- Adaptive Lasso for g(|X|) = log(|X^2 + eps|) as a prior (reweithed - \ell_2) ----
-#         g = lambda w: np.log(np.abs((w ** 2) + eps))
-#         gprime = lambda w: 1. / ((w ** 2) + eps)
-#         n_samples, n_features = L.shape
-#         weights = np.ones(n_features)
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
 
+    Attributes
+    ----------
+    x : array, shape=(n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+    eps = np.finfo(float).eps
 
-#         alpha_max = abs(L.T.dot(x)).max() / len(L)
-#         alpha = self.alpha * alpha_max
-#         # p_obj = lambda w: 1. / (2 * n_samples) * np.sum((x - np.dot(L, w)) ** 2) \
-# #                   + alpha * np.sum(g(w))
-#         for k in range(self.maxiter):
-#             L_w = L / weights[np.newaxis, :]
+    def gprime(w):
+        return 1.0 / ((w ** 2) + eps)
 
-#             clf = linear_model.LassoLars(alpha=alpha,
-#                                          fit_intercept=False,
-#                                          normalize=False)
-#             clf.fit(L_w, x)
-#             coef_ = clf.coef_ / weights
-#             weights = gprime(coef_)
-#             #  print p_obj(coef_)  # should go down
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
 
-#         self.coef_ = coef_
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(x)
+
+    return x
 
 # class IterativeSqrt(BaseEstimator, RegressorMixin):
 #     def __init__(self, alpha=0.2, maxiter=10):
