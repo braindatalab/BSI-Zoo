@@ -263,7 +263,47 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
 
 
 def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
-
+    """Iterative type-II estimator with L_1 regularizer.
+    The optimization objective for iterative type-II methods is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
+    
+    Which in the case of iterative L1 type-II , g(x) and w_i are define as follows::
+    Iterative-L1-typeII::
+        g(x) = min_{\gamma >=0} x^T*Gamma^-1*x + log|alpha I + L*Gamma*L^T| 
+        w_i^(k+1) <-- [L_i^T(lambda*Id + L*\hat{W}\hat{X}*L^T)^(-1)L_i]^(1/2)
+    where 
+        \hat{W} = diag(W)^-1
+        \hat{X} = diag(X)^-1
+    for solving the following problem:
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+    NOTE: Please note that \lambda models the noise variance and it is a different paramter 
+    than regularization paramter \alpha. For simplicity, we assume \lambda = \alpha to be consistant 
+    with sklearn built-in function: "linear_model.LassoLars"
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
+    Attributes
+    ----------
+    x : array, shape=(n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
     def gprime(L_, coef, w, alpha):
         L_T = L_.T
         n_samples, _ = L_.shape
