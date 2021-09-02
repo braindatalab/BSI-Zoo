@@ -260,3 +260,39 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
         weights = gprime(x)
     
     return x
+
+
+def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
+
+    def gprime(L_, coef, w, alpha):
+        L_T = L_.T
+        n_samples, _ = L_.shape
+
+        def w_mat(w):
+            return np.diag(1. / w)
+
+        x_mat = np.abs(np.diag(coef))
+        noise_cov = alpha * np.eye(n_samples)
+        proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)),
+                                    L_T)
+        signal_cov = noise_cov + proj_source_cov
+        sigmaY_inv = np.linalg.inv(signal_cov)
+
+        return np.sqrt(np.diag(np.matmul(np.matmul(L_T, sigmaY_inv), L_)))
+
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                     normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        weights = gprime(L, x, weights, alpha)
+
+    return x
