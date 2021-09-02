@@ -86,15 +86,15 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
 
 
 def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
-    """Iterative L1 estimator with L1 regularizer.
+    """Iterative Type-I estimator with L1 regularizer.
 
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     
-    Which in the case of iterative l1, it boils down to::
+    Which in the case of iterative L1, it boils down to::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
-    Iterative l1::
+    Iterative L1::
         g(x_i) = log(|x_i| + epsilon)
         w_i^(k+1) <-- [|x_i^(k)|+epsilon]
 
@@ -145,13 +145,13 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     return x
 
 def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
-    """Iterative L1 estimator with l2 regularizer.
+    """Iterative Type-I estimator with L2 regularizer.
 
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     
-    Which in the case of iterative l2, g(x_i) and w_i are define as follows::
-    Iterative l2::
+    Which in the case of iterative L2, g(x_i) and w_i are define as follows::
+    Iterative L2::
         g(x_i) = log(x_i^2 + epsilon)
         w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
 
