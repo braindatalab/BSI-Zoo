@@ -205,7 +205,45 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
     return x
 
 def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative type-I estimator with L_0.5 regularizer.
+
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     
+    Which in the case of iterative "sqrt", g(x_i) and w_i are define as follows::
+    Iterative sqrt (L_0.5)::
+        g(x_i) = sqrt(|x_i|)
+        w_i^(k+1) <-- [2sqrt(|x_i|)+epsilon]^-1
+
+    for solving the following problem:
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
+    Parameters
+    ----------
+    L: array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y: array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
+
+    Attributes
+    ----------
+    x : array, shape=(n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
     eps = np.finfo(float).eps
