@@ -24,9 +24,9 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
 
     Parameters
     ----------
-    L: array, shape=(n_sensors, n_sources)
+    L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape=(n_sensors,)
+    y : array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     cov : array, shape=(n_sensors, n_sensors)
         noise covariance matrix
@@ -100,9 +100,9 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
 
     Parameters
     ----------
-    L: array, shape=(n_sensors, n_sources)
+    L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape=(n_sensors,)
+    y : array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     alpha : (float), 
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
@@ -160,9 +160,9 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
 
     Parameters
     ----------
-    L: array, shape=(n_sensors, n_sources)
+    L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape=(n_sensors,)
+    y : array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     alpha : (float), 
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
@@ -205,7 +205,7 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
     return x
 
 def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
-    """Iterative type-I estimator with L_0.5 regularizer.
+    """Iterative Type-I estimator with L_0.5 regularizer.
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     
@@ -217,9 +217,9 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
     Parameters
     ----------
-    L: array, shape=(n_sensors, n_sources)
+    L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape=(n_sensors,)
+    y : array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     alpha : (float), 
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
@@ -263,14 +263,14 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
 
 
 def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
-    """Iterative type-II estimator with L_1 regularizer.
-    The optimization objective for iterative type-II methods is::
+    """Iterative Type-II estimator with L_1 regularizer.
+    The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
     
-    Which in the case of iterative L1 type-II , g_SBl(x) and w_i are define 
+    Which in the case of iterative L1 Type-II , g_SBl(x) and w_i are define 
     as follows::
     
-    Iterative-L1-typeII::
+    Iterative-L1-TypeII::
         g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T| 
         w_i^(k+1) <-- [L_i^T*(lambda*Id + L*hat{W}*hat{X}*L^T)^(-1)*L_i]^(1/2)
     where
@@ -346,7 +346,58 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
 
 def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
+    """Iterative Type-II estimator with L_2 regularizer.
+    The optimization objective for iterative Type-II methods is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
+    
+    Which in the case of iterative L2 Type-II , g_SBl(x) and w_i are define 
+    as follows::
+    
+    Iterative-L2-TypeII::
+        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T| 
+        w_i^(k+1) <-- [(x_i^(k))^2 + (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i]^(-1)
+    where
+        Gamma = diag(gamma) : souce covariance matrix 
+        hat{W} = diag(W)^-1
+    for solving the following problem:
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+    
+    NOTE: Please note that lambda models the noise variance and it is a 
+    different paramter than regularization paramter alpha. For simplicity, 
+    we assume lambda = alpha to be consistant with sklearn built-in 
+    function: "linear_model.LassoLars"
 
+    NOTE: Given the above assumption, one can see the iterative-L2-TypeII
+    as an extension of its Type-I counterpart where eps is tuned adaptively::
+    w_i^(k+1) <-- [(x_i^(k))^2+epsilon^(k)]
+    where 
+    epsilon^(k) = (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i
+    
+    Parameters
+    ----------
+    L : array, shape=(n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y : array, shape=(n_sensors,)
+        measurement vector, capturing sensor measurements 
+    alpha : (float), 
+        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    cov : noise covariance matrix shape=(n_sensors,n_sensors)
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+    tol : float, optional
+        The tolerance for the optimization: if the updates are
+        smaller than ``tol``, the optimization code checks the
+        dual gap for optimality and continues until it is smaller
+        than ``tol``.
+    Attributes
+    ----------
+    x : array, shape=(n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+    
+    References: 
+    """
     def epsilon_update(L, w, alpha):
         L_T = L.T
         n_samples, _ = L.shape
@@ -355,9 +406,11 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
             return np.diag(1 / w)
 
         noise_cov = alpha * np.eye(n_samples)
+        ## TODO: Replace matmul with @ for simplicity and efficiency 
         proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
+        ## TODO: Replace matmul with @ for simplicity and efficiency 
         return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),
                                             np.diag(np.matmul(np.matmul(L_T,
                                                                 sigmaY_inv),
