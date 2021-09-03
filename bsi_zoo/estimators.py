@@ -319,6 +319,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
         x_mat = np.abs(np.diag(coef))
         noise_cov = alpha * np.eye(n_samples)
+        ## TODO: Replace matmul with @ for simplicity and efficiency 
         proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)),
                                     L_T)
         signal_cov = noise_cov + proj_source_cov
@@ -340,5 +341,41 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         weights = gprime(L, x, weights, alpha)
+
+    return x
+
+
+def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
+
+    def epsilon_update(L, w, alpha):
+        L_T = L.T
+        n_samples, _ = L.shape
+
+        def w_mat(w):
+            return np.diag(1 / w)
+
+        noise_cov = alpha * np.eye(n_samples)
+        proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
+        signal_cov = noise_cov + proj_source_cov
+        sigmaY_inv = np.linalg.inv(signal_cov)
+        return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),
+                                            np.diag(np.matmul(np.matmul(L_T,
+                                                                sigmaY_inv),
+                                                                L))))
+
+    n_samples, n_sources = L.shape
+    weights = np.ones(n_sources)
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    for k in range(maxiter):
+        L_w = L / weights[np.newaxis, :]
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
+                                    normalize=False)
+        clf.fit(L_w, y)
+        x = clf.coef_ / weights
+        epsilon = epsilon_update(L, weights, alpha)
+        weights = 1. / ((x ** 2) + epsilon)
 
     return x
