@@ -310,7 +310,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     
     References: 
     """
-    def gprime(L_, coef, w, alpha):
+    def gprime(L_, coef, w, alpha, cov):
         L_T = L_.T
         n_samples, _ = L_.shape
 
@@ -319,6 +319,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
         x_mat = np.abs(np.diag(coef))
         noise_cov = alpha * np.eye(n_samples)
+        # noise_cov = cov
         ## TODO: Replace matmul with @ for simplicity and efficiency 
         proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)),
                                     L_T)
@@ -340,7 +341,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
                                      normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
-        weights = gprime(L, x, weights, alpha)
+        weights = gprime(L, x, weights, alpha, cov)
 
     return x
 
@@ -398,7 +399,7 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
     
     References: 
     """
-    def epsilon_update(L, w, alpha):
+    def epsilon_update(L, w, alpha, cov):
         L_T = L.T
         n_samples, _ = L.shape
 
@@ -406,6 +407,7 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
             return np.diag(1 / w)
 
         noise_cov = alpha * np.eye(n_samples)
+        # noise_cov = cov (extension of method by inporting the noise covariance)
         ## TODO: Replace matmul with @ for simplicity and efficiency 
         proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
         signal_cov = noise_cov + proj_source_cov
@@ -428,7 +430,7 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
                                     normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
-        epsilon = epsilon_update(L, weights, alpha)
+        epsilon = epsilon_update(L, weights, alpha, cov)
         weights = 1. / ((x ** 2) + epsilon)
 
     return x
