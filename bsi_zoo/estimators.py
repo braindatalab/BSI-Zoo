@@ -267,12 +267,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     The optimization objective for iterative type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
     
-    Which in the case of iterative L1 type-II , g(x) and w_i are define 
+    Which in the case of iterative L1 type-II , g_SBl(x) and w_i are define 
     as follows::
     
     Iterative-L1-typeII::
-        g(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha I + L*Gamma*L^T| 
-        w_i^(k+1) <-- [L_i^T(lambda*Id + L*hat{W}*hat{X}*L^T)^(-1)L_i]^(1/2)
+        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T| 
+        w_i^(k+1) <-- [L_i^T*(lambda*Id + L*hat{W}*hat{X}*L^T)^(-1)*L_i]^(1/2)
     where
         Gamma = diag(gamma) : souce covariance matrix 
         hat{W} = diag(W)^-1
@@ -282,14 +282,14 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     
     NOTE: Please note that lambda models the noise variance and it is a 
     different paramter than regularization paramter alpha. For simplicity, 
-    we assume lambda =  alpha to be consistant with sklearn built-in 
+    we assume lambda = alpha to be consistant with sklearn built-in 
     function: "linear_model.LassoLars"
     
     Parameters
     ----------
-    L: array, shape=(n_sensors, n_sources)
+    L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y: array, shape=(n_sensors,)
+    y : array, shape=(n_sensors,)
         measurement vector, capturing sensor measurements 
     alpha : (float), 
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
