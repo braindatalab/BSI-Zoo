@@ -339,12 +339,11 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         x_mat = np.abs(np.diag(coef))
         noise_cov = alpha * np.eye(n_samples)
         # noise_cov = cov
-        ## TODO: Replace matmul with @ for simplicity and efficiency
-        proj_source_cov = np.matmul(np.matmul(L, np.dot(w_mat(weights), x_mat)), L_T)
+        proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
 
-        return np.sqrt(np.diag(np.matmul(np.matmul(L_T, sigmaY_inv), L)))
+        return np.sqrt(np.diag((L_T @ sigmaY_inv) @ L))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 
@@ -425,15 +424,13 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
         noise_cov = alpha * np.eye(n_samples)
         # noise_cov = cov (extension of method by inporting the noise covariance)
-        ## TODO: Replace matmul with @ for simplicity and efficiency
-        proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
+        proj_source_cov = (L @ w_mat(w)) @ L_T
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
-        ## TODO: Replace matmul with @ for simplicity and efficiency
         return np.diag(
             w_mat(w)
             - np.multiply(
-                (w_mat(w ** 2)), np.diag(np.matmul(np.matmul(L_T, sigmaY_inv), L))
+                w_mat(w ** 2), np.diag((L_T @ sigmaY_inv) @ L)
             )
         )
 
