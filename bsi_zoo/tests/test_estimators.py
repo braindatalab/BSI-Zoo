@@ -29,7 +29,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (iterative_L2, 0.01, 1e-1, 0),
         (iterative_sqrt, 0.1, 1e-1, 0),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1),
-        (iterative_L2_typeII, 0.1, 1e-1, 1e-1),
+        (iterative_L2_typeII, 0.1, 1e1, 1e-1),
     ]
 )
 def test_estimator(solver, alpha, rtol, atol):
