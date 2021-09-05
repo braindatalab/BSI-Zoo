@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from bsi_zoo.estimators import (
     reweighted_lasso,
     iterative_L1,
@@ -21,52 +22,19 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     return y, L, x, cov
 
 
-def test_reweighted_lasso():
+@pytest.mark.parametrize(
+    "solver,rtol,atol", [
+        (reweighted_lasso, 1e-1, 0),
+        (iterative_L1, 1e-1, 5e-1),
+        (iterative_L2, 1e-1, 0),
+        (iterative_sqrt, 1e-1, 0),
+        (iterative_L1_typeII, 1e-1, 5e-1),
+        (iterative_L2_typeII, 1e-1, 1e-1),
+    ]
+)
+def test_reweighted_lasso(solver, rtol, atol):
     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = reweighted_lasso(L, y[:, 0], cov, alpha_fraction=0.1)
+    x_hat = solver(L, y[:, 0], cov, alpha=0.1)
     x = x[:, 0]
     np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, rtol=1e-1)
-
-
-def test_iterative_L1():
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_L1(L, y[:, 0], cov, alpha=0.1, maxiter=10)
-    x = x[:, 0]
-    np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, atol=1e-1, rtol=5e-1)
-
-
-def test_iterative_L2():
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_L2(L, y[:, 0], cov, alpha=0.01, maxiter=10)
-    x = x[:, 0]
-
-    np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, rtol=1e-1)
-
-
-def test_iterative_sqrt():
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_sqrt(L, y[:, 0], cov, alpha=0.1)
-    x = x[:, 0]
-    np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, rtol=1e-1)
-
-
-def test_iterative_L1_typeII():
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_L1_typeII(L, y[:, 0], cov, alpha=0.1, maxiter=20)
-    x = x[:, 0]
-
-    np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, atol=1e-1, rtol=5e-1)
-
-
-def test_iterative_L2_typeII():
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = iterative_L2_typeII(L, y[:, 0], cov, alpha=0.1)
-    x = x[:, 0]
-
-    np.testing.assert_array_equal(x != 0, x_hat != 0)
-    np.testing.assert_allclose(x, x_hat, atol=1e1, rtol=1e-1)
+    np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
