@@ -12,8 +12,9 @@ def solver_lasso(Lw, y, alpha, max_iter):
     return model.fit(Lw, y).coef_.copy()
 
 
-def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
-                     max_iter_reweighting=100, tol=1e-4):
+def reweighted_lasso(
+    L, y, cov, alpha_fraction=0.01, max_iter=2000, max_iter_reweighting=100, tol=1e-4
+):
     """Reweighted Lasso estimator with L1 regularizer.
 
     The optimization objective for Reweighted Lasso is::
@@ -27,11 +28,12 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
+        measurement vector, capturing sensor measurements
     cov : array, shape=(n_sensors, n_sensors)
         noise covariance matrix
-    alpha : (float), 
-        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+    alpha : (float),
+        Constant that makes a trade-off between the data fidelity and
+        regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -45,7 +47,8 @@ def reweighted_lasso(L, y, cov, alpha_fraction=0.01, max_iter=2000,
     Attributes
     ----------
     x : array, shape=(n_sources,)
-        Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+        Parameter vector, e.g., source vector in the context of BSI (x in the
+        cost function formula).
     """
     n_samples, n_sources = L.shape
 
@@ -90,7 +93,7 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
 
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
-    
+
     Which in the case of iterative L1, it boils down to::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
@@ -103,9 +106,10 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
-    alpha : (float), 
-        Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
+        measurement vector, capturing sensor measurements
+    alpha : (float),
+        Constant that makes a trade-off between the data fidelity and regularizer.
+        Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
     cov : noise covariance matrix shape=(n_sensors,n_sensors)
@@ -121,8 +125,8 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
     ----------
     x : array, shape (n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
-    
-    References: 
+
+    References:
     """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -136,20 +140,20 @@ def iterative_L1(L, y, cov, alpha=0.2, maxiter=10):
 
     for k in range(maxiter):
         L_w = L / weights[np.newaxis, :]
-        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
-                                     normalize=False)
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         weights = gprime(x)
 
     return x
 
+
 def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
     """Iterative Type-I estimator with L2 regularizer.
 
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
-    
+
     Which in the case of iterative L2, g(x_i) and w_i are define as follows::
     Iterative L2::
         g(x_i) = log(x_i^2 + epsilon)
@@ -163,8 +167,8 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
-    alpha : (float), 
+        measurement vector, capturing sensor measurements
+    alpha : (float),
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
@@ -181,8 +185,8 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
     ----------
     x : array, shape=(n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
-    
-    References: 
+
+    References:
     """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -196,19 +200,19 @@ def iterative_L2(L, y, cov, alpha=0.2, maxiter=10):
 
     for k in range(maxiter):
         L_w = L / weights[np.newaxis, :]
-        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
-                                     normalize=False)
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         weights = gprime(x)
 
     return x
 
+
 def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
     """Iterative Type-I estimator with L_0.5 regularizer.
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
-    
+
     Which in the case of iterative "sqrt", g(x_i) and w_i are define as follows::
     Iterative sqrt (L_0.5)::
         g(x_i) = sqrt(|x_i|)
@@ -220,8 +224,8 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
-    alpha : (float), 
+        measurement vector, capturing sensor measurements
+    alpha : (float),
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
@@ -237,28 +241,27 @@ def iterative_sqrt(L, y, cov, alpha=0.2, maxiter=10):
     ----------
     x : array, shape=(n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
-    
-    References: 
+
+    References:
     """
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
     eps = np.finfo(float).eps
-    
+
     def gprime(w):
-        return 1. / (2. * np.sqrt(np.abs(w)) + eps)
-    
+        return 1.0 / (2.0 * np.sqrt(np.abs(w)) + eps)
+
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
-    
+
     for k in range(maxiter):
         L_w = L / weights[np.newaxis, :]
 
-        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, 
-                                     normalize=False)
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         weights = gprime(x)
-    
+
     return x
 
 
@@ -266,32 +269,32 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     """Iterative Type-II estimator with L_1 regularizer.
     The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
-    
-    Which in the case of iterative L1 Type-II , g_SBl(x) and w_i are define 
+
+    Which in the case of iterative L1 Type-II , g_SBl(x) and w_i are define
     as follows::
-    
+
     Iterative-L1-TypeII::
-        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T| 
+        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T|
         w_i^(k+1) <-- [L_i^T*(lambda*Id + L*hat{W}*hat{X}*L^T)^(-1)*L_i]^(1/2)
     where
-        Gamma = diag(gamma) : souce covariance matrix 
+        Gamma = diag(gamma) : souce covariance matrix
         hat{W} = diag(W)^-1
         hat{X} = diag(X)^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
-    
-    NOTE: Please note that lambda models the noise variance and it is a 
-    different paramter than regularization paramter alpha. For simplicity, 
-    we assume lambda = alpha to be consistant with sklearn built-in 
+
+    NOTE: Please note that lambda models the noise variance and it is a
+    different paramter than regularization paramter alpha. For simplicity,
+    we assume lambda = alpha to be consistant with sklearn built-in
     function: "linear_model.LassoLars"
-    
+
     Parameters
     ----------
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
-    alpha : (float), 
+        measurement vector, capturing sensor measurements
+    alpha : (float),
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
@@ -307,22 +310,22 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     ----------
     x : array, shape=(n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
-    
-    References: 
+
+    References:
     """
+
     def gprime(L_, coef, w, alpha, cov):
         L_T = L_.T
         n_samples, _ = L_.shape
 
         def w_mat(w):
-            return np.diag(1. / w)
+            return np.diag(1.0 / w)
 
         x_mat = np.abs(np.diag(coef))
         noise_cov = alpha * np.eye(n_samples)
         # noise_cov = cov
-        ## TODO: Replace matmul with @ for simplicity and efficiency 
-        proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)),
-                                    L_T)
+        ## TODO: Replace matmul with @ for simplicity and efficiency
+        proj_source_cov = np.matmul(np.matmul(L_, np.dot(w_mat(w), x_mat)), L_T)
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
 
@@ -337,8 +340,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, maxiter=10):
     for k in range(maxiter):
         L_w = L / weights[np.newaxis, :]
 
-        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
-                                     normalize=False)
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         weights = gprime(L, x, weights, alpha, cov)
@@ -350,37 +352,37 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
     """Iterative Type-II estimator with L_2 regularizer.
     The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
-    
-    Which in the case of iterative L2 Type-II , g_SBl(x) and w_i are define 
+
+    Which in the case of iterative L2 Type-II , g_SBl(x) and w_i are define
     as follows::
-    
+
     Iterative-L2-TypeII::
-        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T| 
+        g_SBl(x) = min_{gamma >=0} x^T*Gamma^-1*x + log|alpha*Id + L*Gamma*L^T|
         w_i^(k+1) <-- [(x_i^(k))^2 + (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i]^(-1)
     where
-        Gamma = diag(gamma) : souce covariance matrix 
+        Gamma = diag(gamma) : souce covariance matrix
         hat{W} = diag(W)^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
-    
-    NOTE: Please note that lambda models the noise variance and it is a 
-    different paramter than regularization paramter alpha. For simplicity, 
-    we assume lambda = alpha to be consistant with sklearn built-in 
+
+    NOTE: Please note that lambda models the noise variance and it is a
+    different paramter than regularization paramter alpha. For simplicity,
+    we assume lambda = alpha to be consistant with sklearn built-in
     function: "linear_model.LassoLars"
 
     NOTE: Given the above assumption, one can see the iterative-L2-TypeII
     as an extension of its Type-I counterpart where eps is tuned adaptively::
     w_i^(k+1) <-- [(x_i^(k))^2+epsilon^(k)]
-    where 
+    where
     epsilon^(k) = (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i
-    
+
     Parameters
     ----------
     L : array, shape=(n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape=(n_sensors,)
-        measurement vector, capturing sensor measurements 
-    alpha : (float), 
+        measurement vector, capturing sensor measurements
+    alpha : (float),
         Constant that makes a trade-off between the data fidelity and regularizer. Defaults to 1.0
     max_iter : int, optional
         The maximum number of inner loop iterations
@@ -396,9 +398,10 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
     ----------
     x : array, shape=(n_sources,)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
-    
-    References: 
+
+    References:
     """
+
     def epsilon_update(L, w, alpha, cov):
         L_T = L.T
         n_samples, _ = L.shape
@@ -408,15 +411,17 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
         noise_cov = alpha * np.eye(n_samples)
         # noise_cov = cov (extension of method by inporting the noise covariance)
-        ## TODO: Replace matmul with @ for simplicity and efficiency 
+        ## TODO: Replace matmul with @ for simplicity and efficiency
         proj_source_cov = np.matmul(np.matmul(L, w_mat(w)), L_T)
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
-        ## TODO: Replace matmul with @ for simplicity and efficiency 
-        return np.diag(w_mat(w) - np.multiply((w_mat(w**2)),
-                                            np.diag(np.matmul(np.matmul(L_T,
-                                                                sigmaY_inv),
-                                                                L))))
+        ## TODO: Replace matmul with @ for simplicity and efficiency
+        return np.diag(
+            w_mat(w)
+            - np.multiply(
+                (w_mat(w ** 2)), np.diag(np.matmul(np.matmul(L_T, sigmaY_inv), L))
+            )
+        )
 
     n_samples, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -426,11 +431,10 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, maxiter=10):
 
     for k in range(maxiter):
         L_w = L / weights[np.newaxis, :]
-        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False,
-                                    normalize=False)
+        clf = linear_model.LassoLars(alpha=alpha, fit_intercept=False, normalize=False)
         clf.fit(L_w, y)
         x = clf.coef_ / weights
         epsilon = epsilon_update(L, weights, alpha, cov)
-        weights = 1. / ((x ** 2) + epsilon)
+        weights = 1.0 / ((x ** 2) + epsilon)
 
     return x
