@@ -409,31 +409,6 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
 
-    # def epsilon_update(L, w, alpha, cov):
-    #     L_T = L.T
-    #     n_samples, _ = L.shape
-
-    #     def w_mat(w):
-    #         return np.diag(1 / w)
-
-    #     noise_cov = cov  # extension of method by importing the noise covariance
-    #     proj_source_cov = (L @ w_mat(w)) @ L_T
-    #     signal_cov = noise_cov + proj_source_cov
-    #     sigmaY_inv = np.linalg.inv(signal_cov)
-    #     return np.diag(
-    #         w_mat(w)
-    #         - np.multiply(
-    #             w_mat(w ** 2), np.diag((L_T @ sigmaY_inv) @ L)
-    #         )
-    #     )
-
-    # for _ in range(max_iter_reweighting):
-    #     L_w = L / weights[np.newaxis, :]
-    #     coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-    #     x = coef_ / weights
-    #     epsilon = epsilon_update(L, weights, alpha, cov)
-    #     weights = 1.0 / ((x ** 2) + epsilon)
-
     def gprime(w):
         L_T = L.T
         n_samples, _ = L.shape
