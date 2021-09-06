@@ -18,7 +18,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
     cov = rng.randn(n_sensors, n_sensors)
-    cov = 1e-3 * (cov @ cov.T)
+    cov = 1e-3 * (cov @ cov.T) / n_times
     cov = np.diag(np.diag(cov))
     # cov = 1e-2 * np.diag(np.ones(n_sensors))
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
