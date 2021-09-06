@@ -314,8 +314,6 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    # XXX : cov is not used
-
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -402,7 +400,6 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
     ----------
     XXX
     """
-    # XXX : cov is not used
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
