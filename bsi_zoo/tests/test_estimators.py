@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import linalg
 import pytest
 from bsi_zoo.estimators import (
     reweighted_lasso,
@@ -16,25 +17,34 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     x[:nnz] = rng.randn(nnz, n_times)
     L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
-    cov = 1e-2 * np.diag(np.ones(n_sensors))
+    cov = rng.randn(n_sensors, n_sensors)
+    cov = 1e-3 * (cov @ cov.T)
+    cov = np.diag(np.diag(cov))
+    # cov = 1e-2 * np.diag(np.ones(n_sensors))
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
     y += noise
     return y, L, x, cov
 
 
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol", [
-        (reweighted_lasso, 0.1, 1e-1, 0),
-        (iterative_L1, 0.1, 1e-1, 5e-1),
-        (iterative_L2, 0.01, 1e-1, 0),
-        (iterative_sqrt, 0.1, 1e-1, 0),
-        (iterative_L1_typeII, 0.1, 1e-1, 5e-1),
-        (iterative_L2_typeII, 0.1, 1e1, 1e-1),
+    "solver,alpha,rtol,atol,cov_type", [
+        (reweighted_lasso, 0.1, 1e-1, 0, 'diag'),
+        (iterative_L1, 0.1, 1e-1, 5e-1, 'diag'),
+        (iterative_L2, 0.01, 1e-1, 0, 'diag'),
+        (iterative_sqrt, 0.1, 1e-1, 0, 'diag'),
+        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, 'full'),
+        (iterative_L2_typeII, 0.1, 1e1, 1e-1, 'full'),
     ]
 )
-def test_estimator(solver, alpha, rtol, atol):
+def test_estimator(solver, alpha, rtol, atol, cov_type):
     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
-    x_hat = solver(L, y[:, 0], cov, alpha=alpha)
+    if cov_type == 'diag':
+        whitener = linalg.inv(linalg.sqrtm(cov))
+        L = whitener @ L
+        y = whitener @ y
+        x_hat = solver(L, y[:, 0], alpha=alpha)
+    else:
+        x_hat = solver(L, y[:, 0], cov, alpha=alpha)
     x = x[:, 0]
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)

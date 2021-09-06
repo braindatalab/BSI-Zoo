@@ -25,7 +25,7 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
 
 
 def reweighted_lasso(
-    L, y, cov, alpha=0.2, max_iter=2000, max_iter_reweighting=100, tol=1e-4
+    L, y, alpha=0.2, max_iter=2000, max_iter_reweighting=100, tol=1e-4
 ):
     """Reweighted Lasso estimator with L1 regularizer.
 
@@ -41,9 +41,7 @@ def reweighted_lasso(
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
-    cov : array, shape (n_sensors, n_sensors)
-        noise covariance matrix
-    alpha : (float),
+    alpha : float
         Constant that makes a trade-off between the data fidelity and
         regularizer. Defaults to 0.2
     max_iter : int, optional
@@ -101,7 +99,7 @@ def reweighted_lasso(
     return x
 
 
-def iterative_L1(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
 
     The optimization objective for iterative estimators in general is::
@@ -116,12 +114,10 @@ def iterative_L1(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     Parameters
     ----------
-    L : array, shape=(n_sensors, n_sources)
+    L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape=(n_sensors,)
+    y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
-    cov : array, shape (n_sensors, n_sensors)
-        The noise covariance matrix
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 1.0
@@ -156,7 +152,7 @@ def iterative_L1(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def iterative_L2(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L2 regularizer.
 
     The optimization objective for iterative estimators in general is::
@@ -172,17 +168,15 @@ def iterative_L2(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     Parameters
     ----------
-    L : array, shape=(n_sensors, n_sources)
+    L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape=(n_sensors,)
+    y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2.
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : array, shape (n_sensors, n_sensors)
-        The noise covariance matrix
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
     tol : float, optional
@@ -217,7 +211,7 @@ def iterative_L2(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def iterative_sqrt(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L_0.5 regularizer.
 
     The optimization objective for iterative estimators in general is::
@@ -236,8 +230,6 @@ def iterative_sqrt(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10)
         lead field matrix modeling the forward operator or dictionary matrix
     y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
-    cov : array, shape (n_sensors, n_sensors)
-        The noise covariance matrix
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2.
@@ -297,15 +289,16 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
     Parameters
     ----------
-    L : array, shape=(n_sensors, n_sources)
+    L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape=(n_sensors,)
+    y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
     cov : array, shape (n_sensors, n_sensors)
-        The noise covariance matrix
-    alpha : (float),
+        noise covariance matrix. If float it corresponds to the noise variance
+        assumed to be diagonal.
+    alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
-        Defaults to 1.0
+        Defaults to 0.2
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -323,22 +316,23 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     """
     # XXX : cov is not used
 
-    _, n_sources = L.shape
+    n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
 
+    if isinstance(cov, float):
+        cov = cov * np.eye(n_sensors)
+
     def gprime(coef):
         L_T = L.T
-        n_samples, _ = L.shape
 
         def w_mat(weights):
             return np.diag(1.0 / weights)
 
         x_mat = np.abs(np.diag(coef))
-        noise_cov = alpha * np.eye(n_samples)
-        # noise_cov = cov
+        noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
@@ -350,7 +344,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     return x
 
 
-def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-II estimator with L_2 regularizer.
 
     The optimization objective for iterative Type-II methods is::
@@ -383,23 +377,20 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
     Parameters
     ----------
-    L : array, shape=(n_sensors, n_sources)
+    L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape=(n_sensors,)
+    y : array, shape (n_sensors,)
         measurement vector, capturing sensor measurements
-    alpha : (float),
+    cov : float | array, shape (n_sensors, n_sensors)
+        noise covariance matrix. If float it corresponds to the noise variance
+        assumed to be diagonal.
+    alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
-        Defaults to 1.0
+        Defaults to 0.2
     max_iter : int, optional
         The maximum number of inner loop iterations
-    cov : noise covariance matrix shape=(n_sensors,n_sensors)
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
-    tol : float, optional
-        The tolerance for the optimization: if the updates are
-        smaller than ``tol``, the optimization code checks the
-        dual gap for optimality and continues until it is smaller
-        than ``tol``.
 
     Returns
     -------
@@ -412,8 +403,14 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     XXX
     """
     # XXX : cov is not used
-    _, n_sources = L.shape
+    n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    if isinstance(cov, float):
+        cov = cov * np.eye(n_sensors)
 
     def epsilon_update(L, w, alpha, cov):
         L_T = L.T
@@ -422,8 +419,7 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         def w_mat(w):
             return np.diag(1 / w)
 
-        noise_cov = alpha * np.eye(n_samples)
-        # noise_cov = cov (extension of method by inporting the noise covariance)
+        noise_cov = cov  # extension of method by importing the noise covariance
         proj_source_cov = (L @ w_mat(w)) @ L_T
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = np.linalg.inv(signal_cov)
@@ -434,13 +430,7 @@ def iterative_L2_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             )
         )
 
-    _, n_sources = L.shape
-    weights = np.ones(n_sources)
-
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
-    alpha = alpha * alpha_max
-
-    for k in range(max_iter_reweighting):
+    for _ in range(max_iter_reweighting):
         L_w = L / weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
         x = coef_ / weights
