@@ -299,7 +299,7 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
 
     def gprime(w):
-        return 1  / (2. * np.repeat(g(w), n_orient).ravel())
+        return 1.0  / (2. * np.repeat(g(w), n_orient).ravel())
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -482,7 +482,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
         def w_mat(weights):
             return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
         
-        def epsilon_update(L, weights, alpha, cov):
+        def epsilon_update(L, weights, cov):
             noise_cov = cov  # extension of method by importing the noise covariance
             proj_source_cov = (L @ w_mat(weights)) @ L_T
             signal_cov = noise_cov + proj_source_cov
@@ -493,14 +493,15 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
                     w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L)
                 )
             )
-
+       
         def g_coef(coef):
             return groups_norm2(coef.copy(), n_orient)
 
         def gprime_coef(coef):
             return (np.repeat(g_coef(coef), n_orient).ravel())
 
-        return 1.0 / (gprime_coef(coef) + epsilon_update(L, weights, alpha, cov))
+        return 1.0 / (gprime_coef(coef) + epsilon_update(L, weights, cov))
+        # return 1.0 / ((coef ** 2) + epsilon_update(L, weights, alpha, cov))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 
