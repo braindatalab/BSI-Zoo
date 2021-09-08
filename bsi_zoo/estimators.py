@@ -101,7 +101,7 @@ def reweighted_lasso(
             # extenting the objective function calculation for time series
             obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T),
                                             'fro') ** 2.0
-            obj += (alpha * abs(x) ** 0.5).sum()                               
+            obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
 
         loss_.append(obj)
         if err < tol and i:
