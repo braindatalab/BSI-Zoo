@@ -354,8 +354,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             # X = coef[:, np.newaxis] @ coef[:, np.newaxis].T
             # x_mat = np.diag(np.sqrt(np.diag(X)))
         else:
-            X = coef.T @ coef
-            x_mat = np.diag(np.sqrt(np.diag(X)))
+            x_mat = np.diag(linalg.norm(X, axis=0))
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
