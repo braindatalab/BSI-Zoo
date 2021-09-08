@@ -6,9 +6,15 @@ from sklearn import linear_model
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
-    model = linear_model.LassoLars(
-        max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
-    )
+    if y.ndim == 1:
+        model = linear_model.LassoLars(
+            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+        )
+    else:
+        model = linear_model.MultiTaskLasso(
+            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+        )
+
     return model.fit(Lw, y).coef_.copy()
 
 
