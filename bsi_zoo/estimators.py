@@ -6,9 +6,15 @@ from sklearn import linear_model
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
-    model = linear_model.LassoLars(
-        max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
-    )
+    if y.ndim == 1:
+        model = linear_model.LassoLars(
+            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+        )
+    else:
+        model = linear_model.MultiTaskLasso(
+            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+        )
+
     return model.fit(Lw, y).coef_.copy()
 
 
@@ -20,6 +26,7 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
         L_w = L / weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
         x = coef_ / weights
+        # weights = gprime(x)  # modify weights inplace on purpose
         weights[:] = gprime(x)  # modify weights inplace on purpose
     return x
 
@@ -63,7 +70,12 @@ def reweighted_lasso(
     # XXX cov is not used
     n_samples, n_sources = L.shape
 
-    x = np.zeros(n_sources)
+    if y.ndim > 1:
+        x = np.zeros((n_sources, y.shape[1]))
+        x = x.T
+    else:
+        x = np.zeros(n_sources)
+
     weights = np.ones_like(x)
     x_old = x.copy()
 
@@ -74,14 +86,21 @@ def reweighted_lasso(
 
     for i in range(max_iter_reweighting):
         Lw = L * weights
+        # Lw = L * weights[np.newaxis, :]
         x = _solve_lasso(Lw, y, alpha, max_iter)
-        x = x * weights
+        x *= weights
         err = abs(x - x_old).max()
         err /= max(abs(x_old).max(), abs(x_old).max(), 1.0)
         x_old = x.copy()
         weights = 2 * (abs(x) ** 0.5 + 1e-10)
-        obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
-        obj += (alpha * abs(x) ** 0.5).sum()
+        if x.ndim == 1:
+            obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
+            obj += (alpha * abs(x) ** 0.5).sum()
+        else:
+            # extenting the objective function calculation for time series
+            obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
+            obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
+
         loss_.append(obj)
         if err < tol and i:
             break
@@ -329,7 +348,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         def w_mat(weights):
             return np.diag(1.0 / weights)
 
-        x_mat = np.abs(np.diag(coef))
+        if coef.ndim < 2:
+            x_mat = np.abs(np.diag(coef))
+            # X = coef[:, np.newaxis] @ coef[:, np.newaxis].T
+            # x_mat = np.diag(np.sqrt(np.diag(X)))
+        else:
+            x_mat = np.diag(linalg.norm(X, axis=0))
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov

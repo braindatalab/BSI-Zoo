@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import linalg
 import pytest
+import pdb 
 from bsi_zoo.estimators import (
     reweighted_lasso,
     iterative_L1,
@@ -19,7 +20,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     y = L @ x
     cov = rng.randn(n_sensors, n_sensors)
     cov = 1e-3 * (cov @ cov.T)
-    # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+    # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scalinggit 
     # cov = np.diag(np.diag(cov))
     # cov = 1e-2 * np.diag(np.ones(n_sensors))
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
@@ -37,15 +38,43 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (iterative_L2_typeII, 0.1, 1e1, 1e-1, 'full'),
     ]
 )
+# def test_estimator(solver, alpha, rtol, atol, cov_type):
+#     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
+#     if cov_type == 'diag':
+#         whitener = linalg.inv(linalg.sqrtm(cov))
+#         L = whitener @ L
+#         y = whitener @ y
+#         x_hat = solver(L, y[:, 0], alpha=alpha)
+#     else:
+#         x_hat = solver(L, y[:, 0], cov, alpha=alpha)
+#     x = x[:, 0]
+#     np.testing.assert_array_equal(x != 0, x_hat != 0)
+#     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+
 def test_estimator(solver, alpha, rtol, atol, cov_type):
     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
     if cov_type == 'diag':
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y[:, 0], alpha=alpha)
+        x_hat = solver(L, y, alpha=alpha)
     else:
-        x_hat = solver(L, y[:, 0], cov, alpha=alpha)
-    x = x[:, 0]
+        x_hat = solver(L, y, cov, alpha=alpha)
+    # x = x[:, 0]
+    x = x.T
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+
+# # # Test the performance for single measuremnt vector (SMV) case
+# def test_estimator(solver, alpha, rtol, atol, cov_type):
+#     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
+#     if cov_type == 'diag':
+#         whitener = linalg.inv(linalg.sqrtm(cov))
+#         L = whitener @ L
+#         y = whitener @ y
+#         x_hat = solver(L, y[:, 0], alpha=alpha)
+#     else:
+#         x_hat = solver(L, y[:, 0], cov, alpha=alpha)
+#     x = x[:, 0]
+#     np.testing.assert_array_equal(x != 0, x_hat != 0)
+#     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
