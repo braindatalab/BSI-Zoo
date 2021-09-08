@@ -1,3 +1,4 @@
+from re import T
 import warnings
 
 import numpy as np
@@ -342,7 +343,13 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         def w_mat(weights):
             return np.diag(1.0 / weights)
 
-        x_mat = np.abs(np.diag(coef))
+        if coef.ndim < 2:
+            x_mat = np.abs(np.diag(coef))
+            # X = coef[:, np.newaxis] @ coef[:, np.newaxis].T
+            # x_mat = np.diag(np.sqrt(np.diag(X)))
+        else:
+            X = coef.T @ coef
+            x_mat = np.diag(np.sqrt(np.diag(X)))
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
