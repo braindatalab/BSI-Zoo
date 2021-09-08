@@ -1,5 +1,5 @@
 import warnings
-
+from scipy import linalg
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 from sklearn import linear_model
@@ -99,7 +99,7 @@ def reweighted_lasso(
         else:
             # extenting the objective function calculation for time series
             obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
-            obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
+            obj += alpha * (linalg.norm(x, axis=1) ** 2).sum()                               
 
         loss_.append(obj)
         if err < tol and i:
@@ -353,11 +353,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             # X = coef[:, np.newaxis] @ coef[:, np.newaxis].T
             # x_mat = np.diag(np.sqrt(np.diag(X)))
         else:
+            X = coef.T @ coef
             x_mat = np.diag(linalg.norm(X, axis=0))
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
-        sigmaY_inv = np.linalg.inv(signal_cov)
+        sigmaY_inv = linalg.inv(signal_cov)
 
         return np.sqrt(np.diag((L_T @ sigmaY_inv) @ L))
 
@@ -444,7 +445,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
             noise_cov = cov  # extension of method by importing the noise covariance
             proj_source_cov = (L @ w_mat(weights)) @ L_T
             signal_cov = noise_cov + proj_source_cov
-            sigmaY_inv = np.linalg.inv(signal_cov)
+            sigmaY_inv = linalg.inv(signal_cov)
             return np.diag(
                 w_mat(weights)
                 - np.multiply(
