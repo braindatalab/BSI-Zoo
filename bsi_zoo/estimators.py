@@ -1,21 +1,27 @@
 import warnings
-
+from scipy import linalg
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 from sklearn import linear_model
 
+def groups_norm2(A, n_orient):
+    """Compute squared L2 norms of groups inplace."""
+    n_positions = A.shape[0] // n_orient
+    return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
 
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
             max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
         )
+        x = model.fit(Lw, y).coef_.copy()
     else:
         model = linear_model.MultiTaskLasso(
             max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
         )
-
-    return model.fit(Lw, y).coef_.copy()
+        x = model.fit(Lw, y).coef_.copy()
+        x = x.T
+    return x
 
 
 def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime):
@@ -25,9 +31,9 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
     for _ in range(max_iter_reweighting):
         L_w = L / weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-        x = coef_ / weights
-        # weights = gprime(x)  # modify weights inplace on purpose
-        weights[:] = gprime(x)  # modify weights inplace on purpose
+        x = coef_ / weights[:, np.newaxis]
+        weights = gprime(x)  # modify weights inplace on purpose
+        # weights[:] = gprime(x)  # modify weights inplace on purpose
     return x
 
 
@@ -98,7 +104,7 @@ def reweighted_lasso(
             obj += (alpha * abs(x) ** 0.5).sum()
         else:
             # extenting the objective function calculation for time series
-            obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
+            obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
             obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
 
         loss_.append(obj)
@@ -159,9 +165,16 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
+    n_orient = 1
+
+    def g(w):
+        return np.sqrt(groups_norm2(w.copy(), n_orient))
 
     def gprime(w):
-        return 1.0 / (np.abs(w) + eps)
+        return 1.0 / (np.repeat(g(w), n_orient).ravel() + eps)
+        
+    # def gprime(w):
+    #     return 1.0 / (np.abs(w) + eps)
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -218,9 +231,16 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
+    n_orient = 1
+
+    # def gprime(w):
+    #     return 1.0 / ((w ** 2) + eps)
+
+    def g(w):
+        return groups_norm2(w.copy(), n_orient)
 
     def gprime(w):
-        return 1.0 / ((w ** 2) + eps)
+        return 1.0 / (np.repeat(g(w), n_orient).ravel() + eps)
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -270,9 +290,16 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
+    n_orient = 1
+
+    # def gprime(w):
+    #     return 1.0 / (2.0 * np.sqrt(np.abs(w)) + eps)
+
+    def g(w):
+        return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
 
     def gprime(w):
-        return 1.0 / (2.0 * np.sqrt(np.abs(w)) + eps)
+        return 1  / (2. * np.repeat(g(w), n_orient).ravel())
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -338,26 +365,34 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
-
+    
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
 
     def gprime(coef):
+        n_orient = 1
         L_T = L.T
 
+        # def w_mat(weights):
+        #     return np.diag(1.0 / weights)
+
+        def g(weights):
+            return np.sqrt(groups_norm2(weights.copy(), n_orient))
+
         def w_mat(weights):
-            return np.diag(1.0 / weights)
+            return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
 
         if coef.ndim < 2:
             x_mat = np.abs(np.diag(coef))
             # X = coef[:, np.newaxis] @ coef[:, np.newaxis].T
             # x_mat = np.diag(np.sqrt(np.diag(X)))
         else:
-            x_mat = np.diag(linalg.norm(X, axis=0))
+            X = coef @ coef.T
+            x_mat = np.diag(linalg.norm(X, axis=0))            
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
-        sigmaY_inv = np.linalg.inv(signal_cov)
+        sigmaY_inv = linalg.inv(signal_cov)
 
         return np.sqrt(np.diag((L_T @ sigmaY_inv) @ L))
 
@@ -436,9 +471,16 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
     def gprime(coef):
         L_T = L.T
         n_samples, _ = L.shape
+        n_orient = 1
+
+        # def w_mat(weights):
+        #     return np.diag(1.0 / weights)
+
+        def g(weights):
+            return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
         def w_mat(weights):
-            return np.diag(1.0 / weights)
+            return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
         
         def epsilon_update(L, weights, alpha, cov):
             noise_cov = cov  # extension of method by importing the noise covariance
@@ -452,7 +494,13 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
                 )
             )
 
-        return 1.0 / ((coef ** 2) + epsilon_update(L, weights, alpha, cov))
+        def g_coef(coef):
+            return groups_norm2(coef.copy(), n_orient)
+
+        def gprime_coef(coef):
+            return (np.repeat(g_coef(coef), n_orient).ravel())
+
+        return 1.0 / (gprime_coef(coef) + epsilon_update(L, weights, alpha, cov))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 
