@@ -38,6 +38,19 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (iterative_L2_typeII, 0.1, 1e1, 1e-1, 'full'),
     ]
 )
+# def test_estimator(solver, alpha, rtol, atol, cov_type):
+#     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
+#     if cov_type == 'diag':
+#         whitener = linalg.inv(linalg.sqrtm(cov))
+#         L = whitener @ L
+#         y = whitener @ y
+#         x_hat = solver(L, y[:, 0], alpha=alpha)
+#     else:
+#         x_hat = solver(L, y[:, 0], cov, alpha=alpha)
+#     x = x[:, 0]
+#     np.testing.assert_array_equal(x != 0, x_hat != 0)
+#     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+
 def test_estimator(solver, alpha, rtol, atol, cov_type):
     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
     if cov_type == 'diag':
@@ -52,7 +65,7 @@ def test_estimator(solver, alpha, rtol, atol, cov_type):
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
-# # Test the performance for multiple measuremnt vector (MMV) case
+# # # Test the performance for multiple measuremnt vector (MMV) case
 # def test_estimator(solver, alpha, rtol, atol, cov_type):
 #     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
 #     if cov_type == 'diag':
@@ -63,6 +76,5 @@ def test_estimator(solver, alpha, rtol, atol, cov_type):
 #     else:
 #         x_hat = solver(L, y[:, 0], cov, alpha=alpha)
 #     x = x[:, 0]
-#     x = x.T
 #     np.testing.assert_array_equal(x != 0, x_hat != 0)
 #     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)

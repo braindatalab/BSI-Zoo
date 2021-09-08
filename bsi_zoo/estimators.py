@@ -86,12 +86,14 @@ def reweighted_lasso(
         err /= max(abs(x_old).max(), abs(x_old).max(), 1.0)
         x_old = x.copy()
         weights = 2 * (abs(x) ** 0.5 + 1e-10)
-        # obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
-        # obj += (alpha * abs(x) ** 0.5).sum()
-        # extenting the objective function calculation for time series
-        obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T),
-                                         'fro') ** 2.0
-        obj += (alpha * abs(x) ** 0.5).sum()                                 
+        if x.ndim == 1:
+            obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
+            obj += (alpha * abs(x) ** 0.5).sum()
+        else:
+            # extenting the objective function calculation for time series
+            obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T),
+                                            'fro') ** 2.0
+            obj += (alpha * abs(x) ** 0.5).sum()                               
 
         loss_.append(obj)
         if err < tol and i:
