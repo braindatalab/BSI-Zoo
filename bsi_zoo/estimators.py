@@ -99,8 +99,7 @@ def reweighted_lasso(
             obj += (alpha * abs(x) ** 0.5).sum()
         else:
             # extenting the objective function calculation for time series
-            obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T),
-                                            'fro') ** 2.0
+            obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
             obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
 
         loss_.append(obj)
