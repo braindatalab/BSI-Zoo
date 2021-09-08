@@ -104,8 +104,8 @@ def reweighted_lasso(
             obj += (alpha * abs(x) ** 0.5).sum()
         else:
             # extenting the objective function calculation for time series
-            obj = 0.5 * np.linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
-            obj += alpha * (np.linalg.norm(x, axis=1) ** 2).sum()                               
+            obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
+            obj += alpha * (linalg.norm(x, axis=1) ** 2).sum()                               
 
         loss_.append(obj)
         if err < tol and i:
@@ -388,7 +388,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             # x_mat = np.diag(np.sqrt(np.diag(X)))
         else:
             X = coef @ coef.T
-            x_mat = np.diag(linalg.norm(X, axis=0))            
+            x_mat = np.diag(linalg.norm(X, axis=0))         
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
@@ -486,7 +486,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
             noise_cov = cov  # extension of method by importing the noise covariance
             proj_source_cov = (L @ w_mat(weights)) @ L_T
             signal_cov = noise_cov + proj_source_cov
-            sigmaY_inv = np.linalg.inv(signal_cov)
+            sigmaY_inv = linalg.inv(signal_cov)
             return np.diag(
                 w_mat(weights)
                 - np.multiply(
