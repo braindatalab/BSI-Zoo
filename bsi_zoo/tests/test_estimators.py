@@ -65,7 +65,7 @@ def test_estimator(solver, alpha, rtol, atol, cov_type):
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
-# # # Test the performance for multiple measuremnt vector (MMV) case
+# # # Test the performance for single measuremnt vector (SMV) case
 # def test_estimator(solver, alpha, rtol, atol, cov_type):
 #     y, L, x, cov = _generate_data(n_sensors=50, n_times=1, n_sources=200, nnz=1)
 #     if cov_type == 'diag':

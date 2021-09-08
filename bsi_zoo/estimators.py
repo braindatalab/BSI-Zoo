@@ -27,6 +27,7 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
         L_w = L / weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
         x = coef_ / weights
+        # weights = gprime(x)  # modify weights inplace on purpose
         weights[:] = gprime(x)  # modify weights inplace on purpose
     return x
 
@@ -70,7 +71,12 @@ def reweighted_lasso(
     # XXX cov is not used
     n_samples, n_sources = L.shape
 
-    x = np.zeros(n_sources)
+    if y.ndim > 1:
+        x = np.zeros((n_sources, y.shape[1]))
+        x = x.T
+    else:
+        x = np.zeros(n_sources)
+
     weights = np.ones_like(x)
     x_old = x.copy()
 
@@ -81,8 +87,9 @@ def reweighted_lasso(
 
     for i in range(max_iter_reweighting):
         Lw = L * weights
+        # Lw = L * weights[np.newaxis, :]
         x = _solve_lasso(Lw, y, alpha, max_iter)
-        x = x * weights
+        x *= weights
         err = abs(x - x_old).max()
         err /= max(abs(x_old).max(), abs(x_old).max(), 1.0)
         x_old = x.copy()
