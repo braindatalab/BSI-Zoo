@@ -15,6 +15,7 @@ def _solve_lasso(Lw, y, alpha, max_iter):
             max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
         )
         x = model.fit(Lw, y).coef_.copy()
+        x = x.T
     else:
         model = linear_model.MultiTaskLasso(
             max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha

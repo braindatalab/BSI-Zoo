@@ -51,7 +51,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
 #     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
 def test_estimator(solver, alpha, rtol, atol, cov_type):
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=20, n_sources=200, nnz=1)
+    y, L, x, cov = _generate_data(n_sensors=50, n_times=10, n_sources=200, nnz=1)
     if cov_type == 'diag':
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
