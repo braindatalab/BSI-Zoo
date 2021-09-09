@@ -21,6 +21,8 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     cov = rng.randn(n_sensors, n_sensors)
     cov = 1e-3 * (cov @ cov.T)
     # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scalinggit 
+
+    ## initialization of noise covariance with a diagonal matrix 
     # cov = np.diag(np.diag(cov))
     # cov = 1e-2 * np.diag(np.ones(n_sensors))
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
