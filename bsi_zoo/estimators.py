@@ -30,9 +30,9 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
     x = np.zeros(n_sources)
 
     for _ in range(max_iter_reweighting):
-        L_w = L / weights[np.newaxis, :]
+        L_w = L * weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-        x = coef_ / weights[:, np.newaxis]
+        x = coef_ * weights[:, np.newaxis]
         weights = gprime(x)  # modify weights inplace on purpose
         # weights[:] = gprime(x)  # modify weights inplace on purpose
     return x
@@ -172,7 +172,7 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(groups_norm2(w.copy(), n_orient))
 
     def gprime(w):
-        return 1.0 / (np.repeat(g(w), n_orient).ravel() + eps)
+        return (np.repeat(g(w), n_orient).ravel() + eps)
         
     # def gprime(w):
     #     return 1.0 / (np.abs(w) + eps)
@@ -241,7 +241,7 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return groups_norm2(w.copy(), n_orient)
 
     def gprime(w):
-        return 1.0 / (np.repeat(g(w), n_orient).ravel() + eps)
+        return (np.repeat(g(w), n_orient).ravel() + eps)
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -300,7 +300,7 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
 
     def gprime(w):
-        return 1.0  / (2. * np.repeat(g(w), n_orient).ravel())
+        return  (2. * np.repeat(g(w), n_orient).ravel())
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -395,7 +395,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = linalg.inv(signal_cov)
 
-        return np.sqrt(np.diag((L_T @ sigmaY_inv) @ L))
+        return linalg.inv(np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 
@@ -501,7 +501,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
         def gprime_coef(coef):
             return (np.repeat(g_coef(coef), n_orient).ravel())
 
-        return 1.0 / (gprime_coef(coef) + epsilon_update(L, weights, cov))
+        return (gprime_coef(coef) + epsilon_update(L, weights, cov))
         # return 1.0 / ((coef ** 2) + epsilon_update(L, weights, alpha, cov))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
