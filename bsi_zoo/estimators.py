@@ -35,7 +35,7 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
         x = coef_ * weights[:, np.newaxis]
         weights = gprime(x)
     return x
-    
+
 
 def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
@@ -203,7 +203,7 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
 
     def gprime(w):
-        return  (2. * np.repeat(g(w), n_orient).ravel())
+        return  (2.0 * np.repeat(g(w), n_orient).ravel())
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
