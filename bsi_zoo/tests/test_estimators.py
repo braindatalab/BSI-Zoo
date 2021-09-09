@@ -36,14 +36,14 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type", [
         (iterative_L1, 0.1, 1e-1, 5e-1, 'diag'),
-        (iterative_L2, 0.01, 1e-1, 0, 'diag'),
-        (iterative_sqrt, 0.1, 1e-1, 0, 'diag'),
+        (iterative_L2, 0.1, 1e-1, 5e-1, 'diag'),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, 'diag'),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, 'full'),
-        (iterative_L2_typeII, 0.3, 1e-1, 1e-1, 'full'),
+        (iterative_L2_typeII, 0.2, 1e-1, 1e-1, 'full'),
     ]
 )
 def test_estimator(solver, alpha, rtol, atol, cov_type):
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=20, n_sources=200, nnz=1)
+    y, L, x, cov = _generate_data(n_sensors=50, n_times=10, n_sources=200, nnz=1)
     if cov_type == 'diag':
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
