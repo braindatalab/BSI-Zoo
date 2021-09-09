@@ -33,97 +33,8 @@ def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting
         L_w = L * weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
         x = coef_ * weights[:, np.newaxis]
-        weights = gprime(x)  # modify weights inplace on purpose
-        # weights[:] = gprime(x)  # modify weights inplace on purpose
+        weights = gprime(x)
     return x
-
-
-def reweighted_lasso(
-    L, y, alpha=0.2, max_iter=2000, max_iter_reweighting=100, tol=1e-4
-):
-    """Reweighted Lasso estimator with L1 regularizer.
-
-    The optimization objective for Reweighted Lasso is::
-        (1 / (2 * n_samples)) * ||y - Lx||^2_Fro + alpha * ||x||_1
-
-    Where::
-        ||x||_1 = sum_i sum_j |x_ij|
-
-    Parameters
-    ----------
-    L : array, shape (n_sensors, n_sources)
-        lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
-        measurement vector, capturing sensor measurements
-    alpha : float
-        Constant that makes a trade-off between the data fidelity and
-        regularizer. Defaults to 0.2
-    max_iter : int, optional
-        The maximum number of inner loop iterations
-    max_iter_reweighting : int, optional
-        Maximum number of reweighting steps i.e outer loop iterations
-    tol : float, optional
-        The tolerance for the optimization: if the updates are
-        smaller than ``tol``, the optimization code checks the
-        dual gap for optimality and continues until it is smaller
-        than ``tol``.
-
-    Returns
-    -------
-    x : array, shape (n_sources,)
-        Parameter vector, e.g., source vector in the context of BSI (x in the
-        cost function formula).
-    """
-    # XXX cov is not used
-    n_samples, n_sources = L.shape
-
-    if y.ndim > 1:
-        x = np.zeros((n_sources, y.shape[1]))
-        x = x.T
-    else:
-        x = np.zeros(n_sources)
-
-    weights = np.ones_like(x)
-    x_old = x.copy()
-
-    loss_ = []
-
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
-    alpha = alpha * alpha_max
-
-    for i in range(max_iter_reweighting):
-        Lw = L * weights
-        # Lw = L * weights[np.newaxis, :]
-        x = _solve_lasso(Lw, y, alpha, max_iter)
-        x *= weights
-        err = abs(x - x_old).max()
-        err /= max(abs(x_old).max(), abs(x_old).max(), 1.0)
-        x_old = x.copy()
-        weights = 2 * (abs(x) ** 0.5 + 1e-10)
-        if x.ndim == 1:
-            obj = 0.5 * ((L @ x - y) ** 2).sum() / n_samples
-            obj += (alpha * abs(x) ** 0.5).sum()
-        else:
-            # extenting the objective function calculation for time series
-            obj = 0.5 * linalg.norm(y - np.dot(L, x.T), 'fro') ** 2
-            obj += alpha * (linalg.norm(x, axis=1) ** 2).sum()                               
-
-        loss_.append(obj)
-        if err < tol and i:
-            break
-
-    if i == max_iter_reweighting - 1 and i:
-        warnings.warn(
-            "Reweighted objective did not converge."
-            " You might want to increase "
-            "the number of iterations of reweighting."
-            " Fitting data with very small alpha"
-            " may cause precision problems.",
-            ConvergenceWarning,
-        )
-
-    return x
-
 
 def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
@@ -173,9 +84,6 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     def gprime(w):
         return (np.repeat(g(w), n_orient).ravel() + eps)
-        
-    # def gprime(w):
-    #     return 1.0 / (np.abs(w) + eps)
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -234,9 +142,6 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     weights = np.ones(n_sources)
     n_orient = 1
 
-    # def gprime(w):
-    #     return 1.0 / ((w ** 2) + eps)
-
     def g(w):
         return groups_norm2(w.copy(), n_orient)
 
@@ -292,9 +197,6 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     _, n_sources = L.shape
     weights = np.ones(n_sources)
     n_orient = 1
-
-    # def gprime(w):
-    #     return 1.0 / (2.0 * np.sqrt(np.abs(w)) + eps)
 
     def g(w):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
@@ -373,10 +275,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     def gprime(coef):
         n_orient = 1
         L_T = L.T
-
-        # def w_mat(weights):
-        #     return np.diag(1.0 / weights)
-
+        
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
@@ -474,9 +373,6 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
         n_samples, _ = L.shape
         n_orient = 1
 
-        # def w_mat(weights):
-        #     return np.diag(1.0 / weights)
-
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
@@ -502,7 +398,6 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
             return (np.repeat(g_coef(coef), n_orient).ravel())
 
         return (gprime_coef(coef) + epsilon_update(L, weights, cov))
-        # return 1.0 / ((coef ** 2) + epsilon_update(L, weights, alpha, cov))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 

@@ -3,7 +3,6 @@ from scipy import linalg
 import pytest
 import pdb 
 from bsi_zoo.estimators import (
-    reweighted_lasso,
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
