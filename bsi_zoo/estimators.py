@@ -395,7 +395,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = linalg.inv(signal_cov)
 
-        return linalg.inv(np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
+        return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
     x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
 
