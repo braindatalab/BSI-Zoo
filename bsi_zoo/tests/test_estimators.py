@@ -18,18 +18,23 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     x[:nnz] = rng.randn(nnz, n_times)
     L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
-    cov = rng.randn(n_sensors, n_sensors)
-    cov = 1e-3 * (cov @ cov.T)
-    # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scalinggit 
-
-    ## initialization of noise covariance with a diagonal matrix 
-    # cov = np.diag(np.diag(cov))
-    # cov = 1e-2 * np.diag(np.ones(n_sensors))
+    cov_type = 'diag'
+    if cov_type == 'diag':
+        ## initialization of the noise covariance matrix with a random diagonal matrix 
+        cov = rng.randn(n_sensors, n_sensors)
+        cov = 1e-3 * (cov @ cov.T)
+        cov = np.diag(np.diag(cov))
+        ## initialization of the noise covariance with an identity matrix
+        cov = 1e-2 * np.diag(np.ones(n_sensors))
+    else:
+        cov = rng.randn(n_sensors, n_sensors)
+        cov = 1e-3 * (cov @ cov.T)
+        # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scalinggit 
+        
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
     y += noise
     return y, L, x, cov
 
-# (reweighted_lasso, 0.1, 1e-1, 0, 'diag'),
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type", [
         (iterative_L1, 0.1, 1e-1, 5e-1, 'diag'),
