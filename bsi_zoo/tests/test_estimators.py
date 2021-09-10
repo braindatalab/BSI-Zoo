@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 import pytest
-import pdb 
+
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
@@ -17,9 +17,9 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     x[:nnz] = rng.randn(nnz, n_times)
     L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
-    cov_type = 'full'
-    if cov_type == 'diag':
-        ## initialization of the noise covariance matrix with a random diagonal matrix 
+    cov_type = "full"
+    if cov_type == "diag":
+        ## initialization of the noise covariance matrix with a random diagonal matrix
         cov = rng.randn(n_sensors, n_sensors)
         cov = 1e-3 * (cov @ cov.T)
         cov = np.diag(np.diag(cov))
@@ -29,23 +29,31 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         ## initialization of the noise covariance matrix with a full PSD random matrix
         cov = rng.randn(n_sensors, n_sensors)
         cov = 1e-3 * (cov @ cov.T)
-        # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scalinggit 
+        # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
     y += noise
+    if n_times == 1:
+        y = y[:, 0]
+        x = x[:, 0]
     return y, L, x, cov
 
+
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol,cov_type", [
-        (iterative_L1, 0.1, 1e-1, 5e-1, 'diag'),
-        (iterative_L2, 0.2, 1e-1, 5e-1, 'diag'),
-        (iterative_sqrt, 0.1, 1e-1, 5e-1, 'diag'),
-        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, 'full'),
-        (iterative_L2_typeII, 0.2, 1e-1, 1e-1, 'full'),
-    ]
+    "n_times", [1, 10]
 )
-def test_estimator(solver, alpha, rtol, atol, cov_type):
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=10, n_sources=200, nnz=1)
-    if cov_type == 'diag':
+@pytest.mark.parametrize(
+    "solver,alpha,rtol,atol,cov_type",
+    [
+        (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
+        (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
+        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
+        (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
+    ],
+)
+def test_estimator(n_times, solver, alpha, rtol, atol, cov_type):
+    y, L, x, cov = _generate_data(n_sensors=50, n_times=n_times, n_sources=200, nnz=1)
+    if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y

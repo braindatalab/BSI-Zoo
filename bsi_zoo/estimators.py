@@ -1,13 +1,13 @@
-import warnings
 from scipy import linalg
 import numpy as np
-from sklearn.exceptions import ConvergenceWarning
 from sklearn import linear_model
+
 
 def groups_norm2(A, n_orient):
     """Compute squared L2 norms of groups inplace."""
     n_positions = A.shape[0] // n_orient
     return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
+
 
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
@@ -25,15 +25,20 @@ def _solve_lasso(Lw, y, alpha, max_iter):
     return x
 
 
-def _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime):
-    _, n_sources = L.shape
-    x = np.zeros(n_sources)
+def _solve_reweighted_lasso(
+    L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+):
+    assert max_iter_reweighting > 0
 
     for _ in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
         coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-        x = coef_ * weights[:, np.newaxis]
+        if y.ndim == 1:
+            x = coef_ * weights
+        else:
+            x = coef_ * weights[:, np.newaxis]
         weights = gprime(x)
+
     return x
 
 
@@ -54,7 +59,7 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         measurement vector, capturing sensor measurements
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
@@ -66,7 +71,7 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     Returns
     -------
-    x : array, shape (n_sources,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
 
@@ -74,7 +79,6 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     XXX
     """
-    # XXX cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -84,12 +88,14 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(groups_norm2(w.copy(), n_orient))
 
     def gprime(w):
-        return (np.repeat(g(w), n_orient).ravel() + eps)
+        return np.repeat(g(w), n_orient).ravel() + eps
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
 
-    x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
+    x = _solve_reweighted_lasso(
+        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
 
@@ -112,7 +118,7 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         measurement vector, capturing sensor measurements
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
@@ -129,7 +135,7 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     Returns
     -------
-    x : array, shape (n_sources,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
 
@@ -147,12 +153,14 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return groups_norm2(w.copy(), n_orient)
 
     def gprime(w):
-        return (np.repeat(g(w), n_orient).ravel() + eps)
+        return np.repeat(g(w), n_orient).ravel() + eps
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
 
-    x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
+    x = _solve_reweighted_lasso(
+        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
 
@@ -174,7 +182,7 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         measurement vector, capturing sensor measurements
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
@@ -186,15 +194,13 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     Returns
     -------
-    x : array, shape (n_sources,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
 
     References
     ----------
     TODO
     """
-    # XXX : cov is not used
-    eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
     n_orient = 1
@@ -203,12 +209,14 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
 
     def gprime(w):
-        return  (2.0 * np.repeat(g(w), n_orient).ravel())
+        return 2.0 * np.repeat(g(w), n_orient).ravel()
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
 
-    x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
+    x = _solve_reweighted_lasso(
+        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
 
@@ -241,7 +249,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     ----------
     L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         measurement vector, capturing sensor measurements
     cov : array, shape (n_sensors, n_sensors)
         noise covariance matrix. If float it corresponds to the noise variance
@@ -256,7 +264,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
     Returns
     -------
-    x : array, shape (n_sources,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
 
@@ -269,14 +277,14 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
-    
+
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
 
     def gprime(coef):
         n_orient = 1
         L_T = L.T
-        
+
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
@@ -289,7 +297,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             # x_mat = np.diag(np.sqrt(np.diag(X)))
         else:
             X = coef @ coef.T
-            x_mat = np.diag(linalg.norm(X, axis=0))         
+            x_mat = np.diag(linalg.norm(X, axis=0))
         noise_cov = cov
         proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
         signal_cov = noise_cov + proj_source_cov
@@ -297,12 +305,16 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
         return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
-    x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
+    x = _solve_reweighted_lasso(
+        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
 
 
-def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L2_typeII(
+    L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10
+):
     """Iterative Type-II estimator with L_2 regularizer.
 
     The optimization objective for iterative Type-II methods is::
@@ -337,7 +349,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
     ----------
     L : array, shape (n_sensors, n_sources)
         lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
         measurement vector, capturing sensor measurements
     cov : float | array, shape (n_sensors, n_sensors)
         noise covariance matrix. If float it corresponds to the noise variance
@@ -352,7 +364,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
 
     Returns
     -------
-    x : array, shape (n_sources,)
+    x : array, shape (n_sources,) or (n_sources, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
 
@@ -379,7 +391,7 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
 
         def w_mat(weights):
             return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
-        
+
         def epsilon_update(L, weights, cov):
             noise_cov = cov  # extension of method by importing the noise covariance
             proj_source_cov = (L @ w_mat(weights)) @ L_T
@@ -387,19 +399,19 @@ def iterative_L2_typeII(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweigh
             sigmaY_inv = linalg.inv(signal_cov)
             return np.diag(
                 w_mat(weights)
-                - np.multiply(
-                    w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L)
-                )
+                - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
             )
-       
+
         def g_coef(coef):
             return groups_norm2(coef.copy(), n_orient)
 
         def gprime_coef(coef):
-            return (np.repeat(g_coef(coef), n_orient).ravel())
+            return np.repeat(g_coef(coef), n_orient).ravel()
 
-        return (gprime_coef(coef) + epsilon_update(L, weights, cov))
+        return gprime_coef(coef) + epsilon_update(L, weights, cov)
 
-    x = _solve_reweighted_lasso(L, y, alpha, weights, max_iter, max_iter_reweighting, gprime)
+    x = _solve_reweighted_lasso(
+        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
