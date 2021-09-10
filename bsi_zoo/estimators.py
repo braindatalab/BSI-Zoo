@@ -1,8 +1,10 @@
 from mne.utils import logger, verbose, warn
+from numpy.core.fromnumeric import mean
 from scipy.sparse import spdiags
 
 from scipy import linalg
 import numpy as np
+from scipy.sparse.extract import find
 from sklearn import linear_model
 
 
@@ -418,8 +420,6 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
     ----------
     XXX
     """
-    if gammas is None:
-        gammas = np.ones(L.shape[1], dtype=np.float64)
 
     eps = np.finfo(float).eps
     group_size = 1
@@ -427,10 +427,21 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
     n_times = y.shape[1] 
     coef = np.zeros((n_sources,n_times), dtype=np.float64)
 
+    if gammas is None:
+        # gammas = np.ones(L.shape[1], dtype=np.float64)
+        L_square = np.sum(np.dot(L,L),axis=0)
+        inv_L_square = np.zeros((1,n_sources))
+        L_nonzero_index = L_square > 0
+        inv_L_square(L_nonzero_index) = 1.0 / L_square(L_nonzero_index)
+        w_filter = spdiags(inv_L_square, 0, n_sources, n_sources) @ L.T
+        vec_init = mean(mean(w_filter @ y) ** 2)
+        gamma = vec_init * np.ones(L.shape[1], dtype=np.float64)
+
     # # apply normalization so the numerical values are sane
     y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
     y /= np.sqrt(y_normalize_constant)
     cov /= y_normalize_constant
+    gammas /= y_normalize_constant
     L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     L /= L_normalize_constant
 
@@ -481,8 +492,8 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
         x_bar = np.dot(W,y)
         residual = y - np.dot(L,x_bar)
 
-        C_M = np.dot(residual, residual.T) / n_times
-        cov = np.diag(np.sqrt(np.divide(C_M, Sigma_y_inv)))
+        M_noise = np.dot(residual, residual.T) / n_times
+        cov = np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv)))
         # self.alpha = np.mean(np.diag(np.sqrt(np.divide(C_M, CMinv))))
 
         # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples      
@@ -594,6 +605,7 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=5000, max_iter_reweighting=10):
     _, n_times = y.shape
     gammas = np.ones(n_sources)
     Gamma = spdiags(gammas, 0, n_sources, n_sources)
+    eps = np.finfo(float).eps
 
     # H = np.concatenate(L, np.eyes(n_sensors), axis = 1)
 

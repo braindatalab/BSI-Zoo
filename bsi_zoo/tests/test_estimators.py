@@ -9,9 +9,8 @@ from bsi_zoo.estimators import (
     iterative_L1_typeII,
     iterative_L2_typeII,
     gamma_map,
-    champagne,
 )
-
+    # champagne,
 
 def _generate_data(n_sensors, n_times, n_sources, nnz):
     rng = np.random.RandomState(42)
@@ -52,7 +51,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
         (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
-        (champagne, 0.2, 1e-1, 5e-1, "full"),
+
     ],
 )
 def test_estimator(n_times, solver, alpha, rtol, atol, cov_type):
@@ -66,3 +65,5 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type):
         x_hat = solver(L, y, cov, alpha=alpha)
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+
+# (champagne, 0.2, 1e-1, 5e-1, "full"),
