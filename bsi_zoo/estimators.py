@@ -1,5 +1,6 @@
 from mne.utils import logger, verbose, warn
 from numpy.core.fromnumeric import mean
+from numpy.lib import diag
 from scipy.sparse import spdiags
 
 from scipy import linalg
@@ -420,8 +421,6 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     ----------
     XXX
     """
-
-
     eps = np.finfo(float).eps
     group_size = 1
     n_sensors, n_sources = L.shape
@@ -624,7 +623,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     return x
 
 
-def champagne(L, y, cov=1., alpha=0.2, max_iter=5000, max_iter_reweighting=10):
+def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Champagne method based on our MATLAB codes
 
     Parameters
@@ -657,12 +656,25 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=5000, max_iter_reweighting=10):
     n_sensors, n_sources = L.shape
     _, n_times = y.shape
     gammas = np.ones(n_sources)
-    Gamma = spdiags(gammas, 0, n_sources, n_sources)
     eps = np.finfo(float).eps
-
+    threshold = 0.2 * mean(diag(cov))
+    x = np.zeros((n_sources,n_times))
+    n_active = n_sources
+    active_set = np.arange(n_sources)
     # H = np.concatenate(L, np.eyes(n_sensors), axis = 1)
 
     for _ in range(max_iter):
+        gammas[np.isnan(gammas)] = 0.0
+        gidx = (np.abs(gammas) > threshold)
+        active_set = active_set[gidx]
+        gammas = gammas[gidx]
+
+        # update only active gammas (once set to zero it stays at zero)
+        if n_active > len(active_set):
+            n_active = active_set.size
+            L = L[:, gidx]
+
+        Gamma = spdiags(gammas, 0, len(active_set),len(active_set))
         Sigma_y = (L @ Gamma @ L.T) + cov
         U, S, _ = linalg.svd(Sigma_y, full_matrices=False)
         S = S[np.newaxis, :]
@@ -671,11 +683,12 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=5000, max_iter_reweighting=10):
         # Sigma_y_inv = linalg.inv(Sigma_y)
         x_bar = Gamma @ L.T @ Sigma_y_inv @ y
         gammas = np.sqrt(np.diag(x_bar @ x_bar.T / n_times) / np.diag(L.T @ Sigma_y_inv @ L))
-        Gamma = spdiags(gammas, 0, n_sources, n_sources)
         e_bar = y - (L @ x_bar)
         cov = np.sqrt(np.diag(e_bar @ e_bar.T / n_times) / np.diag(Sigma_y_inv))
+        threshold = 0.2 * mean(diag(cov))
+        
+    x[active_set,:] = x_bar
 
-    x = x_bar
     return x
 
         
