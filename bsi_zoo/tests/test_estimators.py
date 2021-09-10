@@ -2,12 +2,14 @@ import numpy as np
 from scipy import linalg
 import pytest
 import pdb 
+from mne.utils import logger, verbose, warn
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
     iterative_L1_typeII,
     iterative_L2_typeII,
+    gamma_map,
 )
 
 
@@ -41,6 +43,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (iterative_sqrt, 0.1, 1e-1, 5e-1, 'diag'),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, 'full'),
         (iterative_L2_typeII, 0.2, 1e-1, 1e-1, 'full'),
+        (gamma_map, 0.2, 1e-1, 1e-1, 'full'),
     ]
 )
 def test_estimator(solver, alpha, rtol, atol, cov_type):
