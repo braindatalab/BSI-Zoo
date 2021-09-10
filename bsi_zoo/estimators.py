@@ -446,6 +446,9 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     # cov /= y_normalize_constant
     # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     # L /= L_normalize_constant
+    # alpha /= y_normalize_constant
+    
+    threshold = 0.2 * alpha
 
     if n_sources % group_size != 0:
         raise ValueError('Number of sources has to be evenly dividable by the '
@@ -570,8 +573,11 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     x_active = n_const * gammas[:, None] * A
 
     coef[active_set,:] = x_active
-    x = coef
-
+    if n_times == 1:
+        # x = np.squeeze(coef,axis = 1)
+        x = coef[:,0]
+    else:
+        x = coef
     return x
 
 
