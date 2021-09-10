@@ -390,7 +390,7 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, threshold=1e-5, gammas=None):
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= np.finfo(float).eps, gammas=None):
     """Gamma_map method based on MNE package
 
     Parameters
@@ -424,26 +424,28 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
     eps = np.finfo(float).eps
     group_size = 1
     n_sensors, n_sources = L.shape
+    if y.ndim < 2:
+        y = y[:,np.newaxis]
     n_times = y.shape[1] 
-    coef = np.zeros((n_sources,n_times), dtype=np.float64)
+    coef = np.zeros((n_sources,n_times))
+    alpha = mean(np.diag(cov))
 
     if gammas is None:
-        # gammas = np.ones(L.shape[1], dtype=np.float64)
-        L_square = np.sum(np.dot(L,L),axis=0)
-        inv_L_square = np.zeros((1,n_sources))
-        L_nonzero_index = L_square > 0
-        inv_L_square(L_nonzero_index) = 1.0 / L_square(L_nonzero_index)
-        w_filter = spdiags(inv_L_square, 0, n_sources, n_sources) @ L.T
-        vec_init = mean(mean(w_filter @ y) ** 2)
-        gamma = vec_init * np.ones(L.shape[1], dtype=np.float64)
+        gammas = np.ones(L.shape[1])
+        # L_square = np.sum(L ** 2,axis=0)
+        # inv_L_square = np.zeros(n_sources)
+        # L_nonzero_index = L_square > 0
+        # inv_L_square[L_nonzero_index] = 1.0 / L_square[L_nonzero_index]
+        # w_filter = spdiags(inv_L_square, 0, n_sources, n_sources) @ L.T
+        # vec_init = mean(mean(w_filter @ y) ** 2)
+        # gammas = vec_init * np.ones(L.shape[1], dtype=np.float64)
 
-    # # apply normalization so the numerical values are sane
-    y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
-    y /= np.sqrt(y_normalize_constant)
-    cov /= y_normalize_constant
-    gammas /= y_normalize_constant
-    L_normalize_constant = np.linalg.norm(L, ord=np.inf)
-    L /= L_normalize_constant
+    # # # apply normalization so the numerical values are sane
+    # y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
+    # y /= np.sqrt(y_normalize_constant)
+    # cov /= y_normalize_constant
+    # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
+    # L /= L_normalize_constant
 
     if n_sources % group_size != 0:
         raise ValueError('Number of sources has to be evenly dividable by the '
@@ -475,8 +477,8 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
             L = L[:, gidx]
 
         Sigma_y = np.dot(L * gammas[np.newaxis, :], L.T)
-        # CM.flat[::n_sensors + 1] += self.alpha
-        Sigma_y += cov
+        Sigma_y.flat[::n_sensors + 1] += alpha
+        # Sigma_y += cov
 
         # Invert CM keeping symmetry
         U, S, _ = linalg.svd(Sigma_y, full_matrices=False)
@@ -487,14 +489,14 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
         Sigma_y_invL = np.dot(Sigma_y_inv, L)
         A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
 
-        # heteroscedastic update rule
-        W = np.dot(np.diag(gammas),np.dot(L.T,Sigma_y_inv))
-        x_bar = np.dot(W,y)
-        residual = y - np.dot(L,x_bar)
+        # # heteroscedastic update rule
+        # W = np.dot(np.diag(gammas),np.dot(L.T,Sigma_y_inv))
+        # x_bar = np.dot(W,y)
+        # residual = y - np.dot(L,x_bar)
 
-        M_noise = np.dot(residual, residual.T) / n_times
-        cov = np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv)))
-        # self.alpha = np.mean(np.diag(np.sqrt(np.divide(C_M, CMinv))))
+        # M_noise = np.dot(residual, residual.T) / n_times
+        # cov = np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv)))
+        # alpha = np.mean(np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv))))
 
         # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples      
         # # Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
@@ -562,10 +564,12 @@ def gamma_map(L, y, cov=1., alpha=0.9, max_iter=1000, tol=1e-15, update_mode=2, 
         warn('\nConvergence NOT reached !\n')
 
     # undo normalization and compute final posterior mean
-    n_const = np.sqrt(y_normalize_constant) / L_normalize_constant
+
+    # n_const = np.sqrt(y_normalize_constant) / L_normalize_constant
+    n_const = 1
     x_active = n_const * gammas[:, None] * A
 
-    coef[active_set,:] = np.abs(x_active)
+    coef[active_set,:] = x_active
     x = coef
 
     return x
