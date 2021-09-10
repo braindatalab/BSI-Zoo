@@ -390,7 +390,7 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= np.finfo(float).eps, gammas=None):
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= 1e-5, gammas=None):
     """Gamma_map method based on MNE package
 
     Parameters
@@ -421,6 +421,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     XXX
     """
 
+
     eps = np.finfo(float).eps
     group_size = 1
     n_sensors, n_sources = L.shape
@@ -428,6 +429,10 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         y = y[:,np.newaxis]
     n_times = y.shape[1] 
     coef = np.zeros((n_sources,n_times))
+
+    if isinstance(cov, float):
+        cov = cov * np.eye(n_sensors)
+
     alpha = mean(np.diag(cov))
 
     if gammas is None:
@@ -438,7 +443,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         # inv_L_square[L_nonzero_index] = 1.0 / L_square[L_nonzero_index]
         # w_filter = spdiags(inv_L_square, 0, n_sources, n_sources) @ L.T
         # vec_init = mean(mean(w_filter @ y) ** 2)
-        # gammas = vec_init * np.ones(L.shape[1], dtype=np.float64)
+        # gammas = vec_init * np.ones(L.shape[1])
 
     # # # apply normalization so the numerical values are sane
     # y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
@@ -462,10 +467,12 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
 
     if update_mode == 2:
         denom_fun = np.sqrt
-    else:
+    elif update_mode == 1:
         # do nothing
         def denom_fun(x):
             return x
+    else:
+        denom = None
 
     last_size = -1
     for iter_no in range(max_iter):
@@ -492,14 +499,14 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         Sigma_y_invL = np.dot(Sigma_y_inv, L)
         A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
 
-        # # heteroscedastic update rule
-        # W = np.dot(np.diag(gammas),np.dot(L.T,Sigma_y_inv))
-        # x_bar = np.dot(W,y)
-        # residual = y - np.dot(L,x_bar)
+        # heteroscedastic update rule
+        W = np.dot(np.diag(gammas),np.dot(L.T,Sigma_y_inv))
+        x_bar = np.dot(W,y)
+        residual = y - np.dot(L,x_bar)
 
-        # M_noise = np.dot(residual, residual.T) / n_times
-        # cov = np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv)))
-        # alpha = np.mean(np.diag(np.sqrt(np.divide(M_noise, Sigma_y_inv))))
+        M_noise = np.dot(residual, residual.T) / n_times
+        # cov = np.diag(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
+        alpha = np.mean(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
 
         # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples      
         # # Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
@@ -513,15 +520,51 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         # alpha = np.sqrt(noise_numer / noise_denom)
 
         if update_mode == 1:
-            # MacKay fixed point update (10) in [1]
+            # MacKay fixed point update 
             numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1)
             denom = gammas * np.sum(L * Sigma_y_invL, axis=0)
         elif update_mode == 2:
-            # modified MacKay fixed point update (11) in [1]
+            # convex-bounding update
             numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
             denom = np.sum(L * Sigma_y_invL, axis=0)  # sqrt is applied below
+        elif update_mode == 3:
+            # Expectation Maximization (EM) update   
+            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) \
+                + gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0))
         else:
             raise ValueError('Invalid value for update_mode')
+
+        ## learn the regularization parameter (noise variance)
+
+        # if noise_update_mode == 0:
+        #     # do nothing : conventinal champagne
+        #     pass
+        # elif noise_update_mode == 0.5:
+        #     # homoscedastic learning
+        #     Sigma_X_diag = gammas * (1 - gammas * np.sum(G * CMinvG, axis=0));  # posterior covariance
+        #     numer_noise = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     denom_noise = n_sensors - len(active_set) + np.sum(np.divide(Sigma_X_diag,gammas))
+        #     alpha = numer_noise / denom_noise
+        # elif noise_update_mode == 1:
+        #     # homoscedastic learning (using special case of heteroscedastic learning)
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
+        #     alpha = np.mean(np.diag(Lambda))
+        # elif noise_update_mode == 2:
+        #     # heteroscedastic learning
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
+        # elif noise_update_mode == 3: 
+        #     # Full-structural noise (FUN) learning
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     Lambda = np.matmul(np.matmul(linalg.sqrtm(CM),linalg.sqrtm(np.matmul(np.matmul(linalg.sqrtm(CM),M_N),linalg.sqrtm(CM)))),linalg.sqrtm(CM))
+        # elif noise_update_mode == 4:
+        #     pass
+        #     # Spatial CV
+        #     # (hint) using sklearn gridsearc and model selection for tuning the hyperparamters. 
+        # elif noise_update_mode == 5:
+        #     pass
+        #     # Temporal CV
 
         if group_size == 1:
             if denom is None:
