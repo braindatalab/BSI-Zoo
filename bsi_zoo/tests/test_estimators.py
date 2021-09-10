@@ -32,6 +32,9 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
     y += noise
+    if n_times == 1:
+        y = y[:, 0]
+        x = x[:, 0]
     return y, L, x, cov
 
 
