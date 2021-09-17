@@ -11,6 +11,7 @@ from bsi_zoo.estimators import (
     gamma_map,
 )
 
+
 def _generate_data(n_sensors, n_times, n_sources, nnz):
     rng = np.random.RandomState(42)
     x = np.zeros((n_sources, n_times))
@@ -21,15 +22,15 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     noise_type = "random"
     if cov_type == "diag":
         if noise_type == "random":
-            ## initialization of the noise covariance matrix with a random diagonal matrix
+            # initialization of the noise covariance matrix with a random diagonal matrix
             cov = rng.randn(n_sensors, n_sensors)
             cov = 1e-3 * (cov @ cov.T)
             cov = np.diag(np.diag(cov))
         else:
-            ## initialization of the noise covariance with an identity matrix
+            # initialization of the noise covariance with an identity matrix
             cov = 1e-2 * np.diag(np.ones(n_sensors))
     else:
-        ## initialization of the noise covariance matrix with a full PSD random matrix
+        # initialization of the noise covariance matrix with a full PSD random matrix
         cov = rng.randn(n_sensors, n_sensors)
         cov = 1e-3 * (cov @ cov.T)
         # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
@@ -42,7 +43,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
 
 
 @pytest.mark.parametrize(
-    "n_times", [1,10]
+    "n_times", [1, 10]
 )
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",

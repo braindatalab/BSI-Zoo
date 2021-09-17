@@ -1,4 +1,4 @@
-from mne.utils import logger, verbose, warn
+from mne.utils import logger, warn
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
 from scipy.sparse import spdiags
@@ -390,7 +390,8 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= 1e-5, gammas=None, group_size = 1):
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
+              threshold=1e-5, gammas=None, group_size=1):
     """Gamma_map method based on MNE package
 
     Parameters
@@ -410,11 +411,11 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     tol : float
         Tolerance parameter for convergence.
     update_mode : int
-        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul), 
+        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul),
         3: Expectation-Maximization update
     threshold : float
-        A threshold paramter for forcing to zero the small values in 
-        reconstrcuted gamma in each iteration  
+        A threshold paramter for forcing to zero the small values in
+        reconstrcuted gamma in each iteration
     gammas : array, shape=(n_sources,)
         Initial values for posterior variances (gammas). If None, a
         variance of 1.0 is used.
@@ -434,9 +435,9 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     eps = np.finfo(float).eps
     n_sensors, n_sources = L.shape
     if y.ndim < 2:
-        y = y[:,np.newaxis]
-    n_times = y.shape[1] 
-    coef = np.zeros((n_sources,n_times))
+        y = y[:, np.newaxis]
+    n_times = y.shape[1]
+    coef = np.zeros((n_sources, n_times))
 
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
@@ -461,18 +462,17 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     # L /= L_normalize_constant
 
-    
     threshold = 0.2 * alpha
 
     if n_sources % group_size != 0:
         raise ValueError('Number of sources has to be evenly dividable by the '
-                    'group size')
+                         'group size')
 
     n_active = n_sources
     active_set = np.arange(n_sources)
-        
+
     gammas_full_old = gammas.copy()
-    x_bar_old = coef
+    # x_bar_old = coef
 
     if update_mode == 2:
         denom_fun = np.sqrt
@@ -509,15 +509,15 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
 
         # heteroscedastic update rule
-        W = np.dot(np.diag(gammas),np.dot(L.T,Sigma_y_inv))
-        x_bar = np.dot(W,y)
-        residual = y - np.dot(L,x_bar)
+        W = np.dot(np.diag(gammas), np.dot(L.T, Sigma_y_inv))
+        x_bar = np.dot(W, y)
+        residual = y - np.dot(L, x_bar)
 
         M_noise = np.dot(residual, residual.T) / n_times
         # cov = np.diag(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
         alpha = np.mean(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
 
-        # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples      
+        # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples
         # # Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
         # # alpha2 = np.mean(np.diag(Lambda))
 
@@ -529,7 +529,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         # alpha = np.sqrt(noise_numer / noise_denom)
 
         if update_mode == 1:
-            # MacKay fixed point update 
+            # MacKay fixed point update
             numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1)
             denom = gammas * np.sum(L * Sigma_y_invL, axis=0)
         elif update_mode == 2:
@@ -537,13 +537,13 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
             numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
             denom = np.sum(L * Sigma_y_invL, axis=0)  # sqrt is applied below
         elif update_mode == 3:
-            # Expectation Maximization (EM) update   
+            # Expectation Maximization (EM) update
             numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) \
                 + gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0))
         else:
             raise ValueError('Invalid value for update_mode')
 
-        ## learn the regularization parameter (noise variance)
+        # # learn the regularization parameter (noise variance)
 
         # if noise_update_mode == 0:
         #     # do nothing : conventinal champagne
@@ -551,26 +551,26 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         # elif noise_update_mode == 0.5:
         #     # homoscedastic learning
         #     Sigma_X_diag = gammas * (1 - gammas * np.sum(G * CMinvG, axis=0));  # posterior covariance
-        #     numer_noise = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     numer_noise = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
         #     denom_noise = n_sensors - len(active_set) + np.sum(np.divide(Sigma_X_diag,gammas))
         #     alpha = numer_noise / denom_noise
         # elif noise_update_mode == 1:
         #     # homoscedastic learning (using special case of heteroscedastic learning)
-        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
         #     Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
         #     alpha = np.mean(np.diag(Lambda))
         # elif noise_update_mode == 2:
         #     # heteroscedastic learning
-        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
         #     Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
-        # elif noise_update_mode == 3: 
+        # elif noise_update_mode == 3:
         #     # Full-structural noise (FUN) learning
-        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times      
+        #     M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
         #     Lambda = np.matmul(np.matmul(linalg.sqrtm(CM),linalg.sqrtm(np.matmul(np.matmul(linalg.sqrtm(CM),M_N),linalg.sqrtm(CM)))),linalg.sqrtm(CM))
         # elif noise_update_mode == 4:
         #     pass
         #     # Spatial CV
-        #     # (hint) using sklearn gridsearch and model selection built-in functions for tuning the hyperparamters. 
+        #     # (hint) using sklearn gridsearch and model selection built-in functions for tuning the hyperparamters.
         # elif noise_update_mode == 5:
         #     pass
         #     # Temporal CV
@@ -596,9 +596,9 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         gammas_full = np.zeros(n_sources, dtype=np.float64)
         gammas_full[active_set] = gammas
 
-        # compute the noise covariance 
+        # compute the noise covariance
         err = (np.sum(np.abs(gammas_full - gammas_full_old)) /
-            np.sum(np.abs(gammas_full_old)))
+               np.sum(np.abs(gammas_full_old)))
 
         # err_x = linalg.norm(x_bar - x_bar_old, ord = 'fro')
         # print(err_x)
@@ -625,10 +625,10 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     n_const = 1
     x_active = n_const * gammas[:, None] * A
 
-    coef[active_set,:] = x_active
+    coef[active_set, :] = x_active
     if n_times == 1:
         # x = np.squeeze(coef,axis = 1)
-        x = coef[:,0]
+        x = coef[:, 0]
     else:
         x = coef
     return x
@@ -669,7 +669,7 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     gammas = np.ones(n_sources)
     eps = np.finfo(float).eps
     threshold = 0.2 * mean(diag(cov))
-    x = np.zeros((n_sources,n_times))
+    x = np.zeros((n_sources, n_times))
     n_active = n_sources
     active_set = np.arange(n_sources)
     # H = np.concatenate(L, np.eyes(n_sensors), axis = 1)
@@ -685,7 +685,7 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
             n_active = active_set.size
             L = L[:, gidx]
 
-        Gamma = spdiags(gammas, 0, len(active_set),len(active_set))
+        Gamma = spdiags(gammas, 0, len(active_set), len(active_set))
         Sigma_y = (L @ Gamma @ L.T) + cov
         U, S, _ = linalg.svd(Sigma_y, full_matrices=False)
         S = S[np.newaxis, :]
@@ -697,7 +697,7 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         e_bar = y - (L @ x_bar)
         cov = np.sqrt(np.diag(e_bar @ e_bar.T / n_times) / np.diag(Sigma_y_inv))
         threshold = 0.2 * mean(diag(cov))
-        
-    x[active_set,:] = x_bar
+
+    x[active_set, :] = x_bar
 
     return x
