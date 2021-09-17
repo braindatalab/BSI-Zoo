@@ -391,7 +391,7 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= 1e-5, gammas=None):
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, threshold= 1e-5, gammas=None, group_size = 1):
     """Gamma_map method based on MNE package
 
     Parameters
@@ -408,8 +408,9 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         Defaults to 0.2
     max_iter : int, optional
         The maximum number of inner loop iterations
-    max_iter_reweighting : int, optional
-        Maximum number of reweighting steps i.e outer loop iterations
+    alpha : float
+        Constant that makes a trade-off between the data fidelity and regularizer.
+        Defaults to 0.2
 
     Returns
     -------
@@ -447,10 +448,11 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     # # # apply normalization so the numerical values are sane
     # y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
     # y /= np.sqrt(y_normalize_constant)
+    # alpha /= y_normalize_constant
     # cov /= y_normalize_constant
     # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     # L /= L_normalize_constant
-    # alpha /= y_normalize_constant
+
     
     threshold = 0.2 * alpha
 
