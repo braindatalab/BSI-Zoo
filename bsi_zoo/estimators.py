@@ -411,10 +411,16 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     tol : float
         Tolerance parameter for convergence.
     update_mode : int
-        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul), 3: Expectation-Maximization update
+        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul), 
+        3: Expectation-Maximization update
+    threshold : float
+        A threshold paramter for forcing to zero the small values in 
+        reconstrcuted gamma in each iteration  
     gammas : array, shape=(n_sources,)
         Initial values for posterior variances (gammas). If None, a
         variance of 1.0 is used.
+    group_size : int
+        Number of consecutive sources which use the same gamma.
 
     Returns
     -------
