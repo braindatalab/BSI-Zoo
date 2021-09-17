@@ -407,10 +407,14 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
     max_iter : int, optional
-        The maximum number of inner loop iterations
-    alpha : float
-        Constant that makes a trade-off between the data fidelity and regularizer.
-        Defaults to 0.2
+        The maximum number iterations
+    tol : float
+        Tolerance parameter for convergence.
+    update_mode : int
+        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul), 3: Expectation-Maximization update
+    gammas : array, shape=(n_sources,)
+        Initial values for posterior variances (gammas). If None, a
+        variance of 1.0 is used.
 
     Returns
     -------
@@ -423,7 +427,6 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
     XXX
     """
     eps = np.finfo(float).eps
-    group_size = 1
     n_sensors, n_sources = L.shape
     if y.ndim < 2:
         y = y[:,np.newaxis]
