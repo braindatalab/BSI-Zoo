@@ -570,10 +570,11 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2, 
         # elif noise_update_mode == 4:
         #     pass
         #     # Spatial CV
-        #     # (hint) using sklearn gridsearc and model selection for tuning the hyperparamters. 
+        #     # (hint) using sklearn gridsearch and model selection built-in functions for tuning the hyperparamters. 
         # elif noise_update_mode == 5:
         #     pass
         #     # Temporal CV
+        #     # (hint) using the type-II loss as a metric for minimizing the Bregman distanct
 
         if group_size == 1:
             if denom is None:
