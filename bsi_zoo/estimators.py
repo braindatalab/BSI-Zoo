@@ -5,7 +5,6 @@ from scipy.sparse import spdiags
 
 from scipy import linalg
 import numpy as np
-from scipy.sparse.extract import find
 from sklearn import linear_model
 
 
@@ -701,6 +700,3 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     x[active_set,:] = x_bar
 
     return x
-
-        
-
