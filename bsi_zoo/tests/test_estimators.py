@@ -18,13 +18,16 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
     cov_type = "full"
+    noise_type = "random"
     if cov_type == "diag":
-        ## initialization of the noise covariance matrix with a random diagonal matrix
-        cov = rng.randn(n_sensors, n_sensors)
-        cov = 1e-3 * (cov @ cov.T)
-        cov = np.diag(np.diag(cov))
-        ## initialization of the noise covariance with an identity matrix
-        cov = 1e-2 * np.diag(np.ones(n_sensors))
+        if noise_type == "random":
+            ## initialization of the noise covariance matrix with a random diagonal matrix
+            cov = rng.randn(n_sensors, n_sensors)
+            cov = 1e-3 * (cov @ cov.T)
+            cov = np.diag(np.diag(cov))
+        else:
+            ## initialization of the noise covariance with an identity matrix
+            cov = 1e-2 * np.diag(np.ones(n_sensors))
     else:
         ## initialization of the noise covariance matrix with a full PSD random matrix
         cov = rng.randn(n_sensors, n_sensors)
