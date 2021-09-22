@@ -12,13 +12,19 @@ from bsi_zoo.estimators import (
 )
 
 
-def _generate_data(n_sensors, n_times, n_sources, nnz):
+def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfield):
     rng = np.random.RandomState(42)
+    if path_to_leadfield is not None:
+        lead_field = np.load(path_to_leadfield, allow_pickle=True)
+        L = lead_field['lead_field']
+        n_sensors, n_sources = L.shape
+    else:
+        L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
+
     x = np.zeros((n_sources, n_times))
     x[:nnz] = rng.randn(nnz, n_times)
-    L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
     y = L @ x
-    cov_type = "full"
+
     noise_type = "random"
     if cov_type == "diag":
         if noise_type == "random":
@@ -46,6 +52,9 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     "n_times", [1, 10]
 )
 @pytest.mark.parametrize(
+    "path_to_leadfield", [None, 'bsi_zoo/tests/data/lead_field.npz']
+)
+@pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
@@ -56,8 +65,8 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
     ],
 )
-def test_estimator(n_times, solver, alpha, rtol, atol, cov_type):
-    y, L, x, cov = _generate_data(n_sensors=50, n_times=n_times, n_sources=200, nnz=1)
+def test_estimator(n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield):
+    y, L, x, cov = _generate_data(n_sensors=50, n_times=n_times, n_sources=200, nnz=1, cov_type=cov_type, path_to_leadfield=path_to_leadfield)
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
