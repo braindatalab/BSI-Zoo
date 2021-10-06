@@ -6,6 +6,7 @@ from scipy.sparse import spdiags
 from scipy import linalg
 import numpy as np
 from sklearn import linear_model
+from sklearn.model_selection import GridSearchCV
 
 
 def groups_norm2(A, n_orient):
@@ -44,6 +45,21 @@ def _solve_reweighted_lasso(
             x = coef_ * weights[:, np.newaxis]
         weights = gprime(x)
 
+    return x
+
+
+def estimator(solver, L, y):
+    alphas = np.linspace(0.01, 5, 20)
+    clf = GridSearchCV(
+        estimator=solver,
+        param_grid=dict(alpha=alphas),
+        scoring="neg_mean_squared_error",
+        cv=5,
+        n_jobs=-1,
+    )
+    clf.fit(L, y)
+
+    x = solver(L, y, alpha=clf.best_estimator_.alpha)
     return x
 
 
@@ -390,8 +406,18 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
-              threshold=1e-5, gammas=None, group_size=1):
+def gamma_map(
+    L,
+    y,
+    cov=1.0,
+    alpha=0.2,
+    max_iter=1000,
+    tol=1e-15,
+    update_mode=2,
+    threshold=1e-5,
+    gammas=None,
+    group_size=1,
+):
     """Gamma_map method based on MNE package
 
     Parameters
@@ -465,8 +491,9 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
     threshold = 0.2 * alpha
 
     if n_sources % group_size != 0:
-        raise ValueError('Number of sources has to be evenly dividable by the '
-                         'group size')
+        raise ValueError(
+            "Number of sources has to be evenly dividable by the " "group size"
+        )
 
     n_active = n_sources
     active_set = np.arange(n_sources)
@@ -480,13 +507,14 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
         # do nothing
         def denom_fun(x):
             return x
+
     else:
         denom = None
 
     last_size = -1
     for iter_no in range(max_iter):
         gammas[np.isnan(gammas)] = 0.0
-        gidx = (np.abs(gammas) > threshold)
+        gidx = np.abs(gammas) > threshold
         active_set = active_set[gidx]
         gammas = gammas[gidx]
 
@@ -496,7 +524,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
             L = L[:, gidx]
 
         Sigma_y = np.dot(L * gammas[np.newaxis, :], L.T)
-        Sigma_y.flat[::n_sensors + 1] += alpha
+        Sigma_y.flat[:: n_sensors + 1] += alpha
         # Sigma_y += cov
 
         # Invert CM keeping symmetry
@@ -538,10 +566,11 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
             denom = np.sum(L * Sigma_y_invL, axis=0)  # sqrt is applied below
         elif update_mode == 3:
             # Expectation Maximization (EM) update
-            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) \
-                + gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0))
+            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) + gammas * (
+                1 - gammas * np.sum(L * Sigma_y_invL, axis=0)
+            )
         else:
-            raise ValueError('Invalid value for update_mode')
+            raise ValueError("Invalid value for update_mode")
 
         # # learn the regularization parameter (noise variance)
 
@@ -580,8 +609,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
             if denom is None:
                 gammas = numer
             else:
-                gammas = numer / np.maximum(denom_fun(denom),
-                                            np.finfo('float').eps)
+                gammas = numer / np.maximum(denom_fun(denom), np.finfo("float").eps)
         else:
             numer_comb = np.sum(numer.reshape(-1, group_size), axis=1)
             if denom is None:
@@ -597,27 +625,30 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
         gammas_full[active_set] = gammas
 
         # compute the noise covariance
-        err = (np.sum(np.abs(gammas_full - gammas_full_old)) /
-               np.sum(np.abs(gammas_full_old)))
+        err = np.sum(np.abs(gammas_full - gammas_full_old)) / np.sum(
+            np.abs(gammas_full_old)
+        )
 
         # err_x = linalg.norm(x_bar - x_bar_old, ord = 'fro')
         # print(err_x)
 
         gammas_full_old = gammas_full
 
-        breaking = (err < tol or n_active == 0)
+        breaking = err < tol or n_active == 0
         if len(gammas) != last_size or breaking:
-            logger.info('Iteration: %d\t active set size: %d\t convergence: '
-                        '%0.3e' % (iter_no, len(gammas), err))
+            logger.info(
+                "Iteration: %d\t active set size: %d\t convergence: "
+                "%0.3e" % (iter_no, len(gammas), err)
+            )
             last_size = len(gammas)
 
         if breaking:
             break
 
     if iter_no < max_iter - 1:
-        logger.info('\nConvergence reached !\n')
+        logger.info("\nConvergence reached !\n")
     else:
-        warn('\nConvergence NOT reached !\n')
+        warn("\nConvergence NOT reached !\n")
 
     # undo normalization and compute final posterior mean
 
@@ -634,7 +665,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
     return x
 
 
-def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Champagne method based on our MATLAB codes
 
     Parameters
@@ -676,7 +707,7 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
     for _ in range(max_iter):
         gammas[np.isnan(gammas)] = 0.0
-        gidx = (np.abs(gammas) > threshold)
+        gidx = np.abs(gammas) > threshold
         active_set = active_set[gidx]
         gammas = gammas[gidx]
 
@@ -693,7 +724,9 @@ def champagne(L, y, cov=1., alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         Sigma_y_inv = np.dot(U / (S + eps), U.T)
         # Sigma_y_inv = linalg.inv(Sigma_y)
         x_bar = Gamma @ L.T @ Sigma_y_inv @ y
-        gammas = np.sqrt(np.diag(x_bar @ x_bar.T / n_times) / np.diag(L.T @ Sigma_y_inv @ L))
+        gammas = np.sqrt(
+            np.diag(x_bar @ x_bar.T / n_times) / np.diag(L.T @ Sigma_y_inv @ L)
+        )
         e_bar = y - (L @ x_bar)
         cov = np.sqrt(np.diag(e_bar @ e_bar.T / n_times) / np.diag(Sigma_y_inv))
         threshold = 0.2 * mean(diag(cov))
