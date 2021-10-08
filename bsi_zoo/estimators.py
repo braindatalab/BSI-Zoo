@@ -7,6 +7,11 @@ from scipy import linalg
 import numpy as np
 from sklearn import linear_model
 from sklearn.model_selection import GridSearchCV
+from sklearn.base import BaseEstimator, ClassifierMixin
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def groups_norm2(A, n_orient):
@@ -48,18 +53,34 @@ def _solve_reweighted_lasso(
     return x
 
 
-def estimator(solver, L, y):
+class Solver(BaseEstimator, ClassifierMixin):
+    def __init__(self, solver, alpha=None, cov=None):
+        self.solver = solver
+        self.alpha = alpha
+        self.cov = cov
+
+    def fit(self, L, y):
+        if self.cov is None:
+            return self.solver(L, y, alpha=self.alpha)
+        else:
+            return self.solver(L, y, self.cov, alpha=self.alpha)
+
+
+def estimator(solver, L, y, cov=None):
     alphas = np.linspace(0.01, 5, 20)
     clf = GridSearchCV(
-        estimator=solver,
+        estimator=Solver(solver, cov=cov),
         param_grid=dict(alpha=alphas),
         scoring="neg_mean_squared_error",
         cv=5,
         n_jobs=-1,
     )
     clf.fit(L, y)
+    if cov is None:
+        x = solver(L, y, alpha=clf.best_estimator_.alpha)
+    else:
+        x = solver(L, y, cov, alpha=clf.best_estimator_.alpha)
 
-    x = solver(L, y, alpha=clf.best_estimator_.alpha)
     return x
 
 
