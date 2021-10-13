@@ -3,6 +3,7 @@ from scipy import linalg
 import pytest
 
 from bsi_zoo.estimators import (
+    estimator,
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
@@ -42,9 +43,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz):
     return y, L, x, cov
 
 
-@pytest.mark.parametrize(
-    "n_times", [1, 10]
-)
+@pytest.mark.parametrize("n_times", [1, 10])
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -62,8 +61,8 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type):
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y, alpha=alpha)
+        x_hat = estimator(solver, L, y)
     else:
-        x_hat = solver(L, y, cov, alpha=alpha)
+        x_hat = estimator(solver, L, y, cov)
     np.testing.assert_array_equal(x != 0, x_hat != 0)
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
