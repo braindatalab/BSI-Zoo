@@ -60,10 +60,18 @@ class Solver(BaseEstimator, ClassifierMixin):
         self.cov = cov
 
     def fit(self, L, y):
+        self.L_ = L
+        self.y_ = y
+
+        return self
+
+    def predict(self, y):
         if self.cov is None:
-            return self.solver(L, y, alpha=self.alpha)
+            self.coeff_ = self.solver(self.L_, y, alpha=self.alpha)
         else:
-            return self.solver(L, y, self.cov, alpha=self.alpha)
+            self.coeff_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+
+        return self.coeff_
 
 
 def estimator(solver, L, y, cov=None):
