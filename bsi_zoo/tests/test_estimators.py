@@ -84,21 +84,13 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfie
         x_hat = solver(L, y, cov, alpha=alpha)
 
     noise_hat = y - (L @ x_hat)
-    if n_times > 1:
-        np.testing.assert_array_less(
-            np.linalg.norm(
-                peak_local_max(np.linalg.norm(x, axis=0), num_peaks=1)
-                - peak_local_max(np.linalg.norm(x_hat, axis=0), num_peaks=1), axis=0
-            ),
-            1.1,
-        )
-    else:
-        np.testing.assert_array_less(
-            np.linalg.norm(
-                peak_local_max(x, num_peaks=1) - peak_local_max(x_hat, num_peaks=1)
-            ),
-            1.1,
-        )
+
+    np.testing.assert_array_less(
+        np.linalg.norm(
+            peak_local_max(x, num_peaks=1) - peak_local_max(x_hat, num_peaks=1)
+        ),
+        1.1,
+    )
 
     if path_to_leadfield is None:
         np.testing.assert_array_equal(x != 0, x_hat != 0)
@@ -108,4 +100,6 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfie
     if n_times > 1:
         np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
     else:
-        np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)  # TODO: decide threshold
+        np.testing.assert_allclose(
+            noise, noise_hat[:, np.newaxis], rtol=1, atol=5
+        )  # TODO: decide threshold
