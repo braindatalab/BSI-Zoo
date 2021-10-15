@@ -88,7 +88,7 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfie
         np.testing.assert_array_less(
             np.linalg.norm(
                 peak_local_max(np.linalg.norm(x, axis=0), num_peaks=1)
-                - peak_local_max(np.linalg.norm(x_hat, axis=0), num_peaks=1)
+                - peak_local_max(np.linalg.norm(x_hat, axis=0), num_peaks=1), axis=0
             ),
             1.1,
         )
@@ -105,6 +105,7 @@ def test_estimator(n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfie
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
     # residual error check
-    np.testing.assert_allclose(
-        noise, noise_hat[:, np.newaxis], rtol=1, atol=5
-    )  # TODO: decide threshold
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)  # TODO: decide threshold
