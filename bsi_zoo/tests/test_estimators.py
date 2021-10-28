@@ -23,7 +23,8 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
         L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
 
     x = np.zeros((n_sources, n_times))
-    x[:nnz] = rng.randn(nnz, n_times)
+    x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
+    # x[:nnz] = rng.randn(nnz, n_times)
     y = L @ x
 
     noise_type = "random"
@@ -112,11 +113,14 @@ def test_estimator(
         from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
         from mne import read_forward_solution
         from mne.viz import plot_sparse_source_estimates
+        import mne
 
         fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
         fwd = read_forward_solution(fwd_fname)
+        fwd = mne.convert_forward_solution(fwd, force_fixed=True)
 
-        active_set = np.ones(x.shape[0], dtype=bool)  # FIXME
+        # active_set = np.ones(x.shape[0], dtype=bool)  # FIXME
+        active_set = (np.linalg.norm(x, axis=1) != 0)
         # indices = np.argsort(np.sum(x ** 2, axis=1))[-100:]
         # active_set = np.zeros(x.shape[0], dtype=bool)
         # for idx in indices:
@@ -124,7 +128,8 @@ def test_estimator(
         #     active_set[idx:idx + 1] = True
         # x = x[active_set]
 
-        stc = _make_sparse_stc(x, active_set, fwd, tmin=1, tstep=1)
+        stc = _make_sparse_stc(x[active_set], active_set, fwd, tmin=1, tstep=1)
+        
         # stc_hat = _make_sparse_stc(x_hat, active_set, fwd, tmin=1, tstep=1)
 
         plot_sparse_source_estimates(
