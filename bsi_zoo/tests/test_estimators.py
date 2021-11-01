@@ -119,30 +119,21 @@ def test_estimator(
         fwd = read_forward_solution(fwd_fname)
         fwd = mne.convert_forward_solution(fwd, force_fixed=True)
 
-        # active_set = np.ones(x.shape[0], dtype=bool)  # FIXME
-        active_set = (np.linalg.norm(x, axis=1) != 0)
-        # indices = np.argsort(np.sum(x ** 2, axis=1))[-100:]
-        # active_set = np.zeros(x.shape[0], dtype=bool)
-        # for idx in indices:
-        #     idx -= idx % 1
-        #     active_set[idx:idx + 1] = True
-        # x = x[active_set]
+        active_set = np.linalg.norm(x, axis=1) != 0
+        active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
 
-        stc = _make_sparse_stc(x[active_set], active_set, fwd, tmin=1, tstep=1)
-        
-        # stc_hat = _make_sparse_stc(x_hat, active_set, fwd, tmin=1, tstep=1)
+        stc = _make_sparse_stc(
+            x[active_set], active_set, fwd, tmin=1, tstep=1
+        )  # ground truth
+        stc_hat = _make_sparse_stc(
+            x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+        )  # estimate
 
         plot_sparse_source_estimates(
             fwd["src"],
-            stc,
+            [stc, stc_hat],
             bgcolor=(1, 1, 1),
             opacity=0.1,
-            colors="r",
-            fig_name="Ground truth-" + solver.__name__,
+            fig_name=solver.__name__,
+            # labels=[np.asarray(['Ground truth']), np.asarray(['Estimate'])]
         )
-        # plot_sparse_source_estimates(fwd['src'], stc_hat, bgcolor=(1, 1, 1), opacity=0.1, colors='b', fig_name='Source estimate-' + solver.__name__)
-        # TODO: plot x_hat in same figure
-
-        import pdb
-
-        pdb.set_trace()
