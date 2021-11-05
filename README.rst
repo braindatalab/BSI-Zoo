@@ -1,7 +1,7 @@
 BSI Zoo
 =========================================
 
-#  Brain Source Imaging (BSI) Zoo
+# Brain Source Imaging (BSI) Zoo
 The goal of this repository is to efficiently implement all brain source imaging techniques and benchmark their perfromance with respect to different metrics. 
  
 
