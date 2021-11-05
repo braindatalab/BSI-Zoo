@@ -32,8 +32,6 @@ gprime = lambda w: 1. / (np.abs(w) + eps)
 
 ![](https://i.imgur.com/GJsY3L7.png)
 
-
-
 ### Iterative $\ell_2$:
 \begin{equation}
 g(x_{i}) = \log \left(\left|x_{i}^2+\epsilon\right|\right)
