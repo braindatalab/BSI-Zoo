@@ -48,7 +48,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     noise_norm = np.linalg.norm(noise, "fro")
     noise_normalised = noise / noise_norm
 
-    alpha = 0.90  # 20dB snr
+    alpha = 0.99  # 40dB snr
     noise_scaled = (1 - alpha / alpha) * signal_norm * noise_normalised
     cov_scaled = cov * ((1 - alpha / alpha) * (signal_norm / noise_norm)) ** 2
     y += noise_scaled
