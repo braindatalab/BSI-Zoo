@@ -42,9 +42,15 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
         cov = rng.randn(n_sensors, n_sensors)
         cov = 1e-3 * (cov @ cov.T)
         # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+
+    signal_norm = np.linalg.norm(y, "fro")
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-    # snr = 20 * np.log(np.linalg.norm(y, 'fro') / np.linalg.norm(noise, 'fro'))
-    y += noise
+    noise_norm = np.linalg.norm(noise, "fro")
+    noise_normalised = noise / noise_norm
+
+    alpha = 0.90  # 20dB snr
+    y += (1 - alpha / alpha) * signal_norm * noise_normalised
+
     if n_times == 1:
         y = y[:, 0]
         x = x[:, 0]
@@ -137,3 +143,7 @@ def test_estimator(
             fig_name=solver.__name__,
             # labels=[np.asarray(['Ground truth']), np.asarray(['Estimate'])]
         )
+
+        import pdb
+
+        pdb.set_trace()
