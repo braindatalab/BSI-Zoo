@@ -17,6 +17,7 @@ build
 *cachedir/
 dist/
 
+bsi_zoo/tests/data
 doc/_build/
 doc/generated
 doc/auto_examples/
