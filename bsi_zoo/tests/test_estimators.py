@@ -49,13 +49,15 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     noise_normalised = noise / noise_norm
 
     alpha = 0.90  # 20dB snr
-    y += (1 - alpha / alpha) * signal_norm * noise_normalised
+    noise_scaled = (1 - alpha / alpha) * signal_norm * noise_normalised
+    cov_scaled = cov * ((1 - alpha / alpha) * (signal_norm / noise_norm)) ** 2
+    y += noise_scaled
 
     if n_times == 1:
         y = y[:, 0]
         x = x[:, 0]
 
-    return y, L, x, cov, noise
+    return y, L, x, cov_scaled, noise_scaled
 
 
 @pytest.mark.parametrize("n_times", [1, 10])
