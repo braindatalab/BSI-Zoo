@@ -476,7 +476,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
 
     if update_mode == 2:
         denom_fun = np.sqrt
-    elif update_mode == 1:
+    elif update_mode == 1 and update_mode == 3:
         # do nothing
         def denom_fun(x):
             return x
