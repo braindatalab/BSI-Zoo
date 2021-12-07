@@ -89,5 +89,21 @@ def test_estimator(
     if path_to_leadfield is None:
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+    
+    # residual error check
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(
+            noise, noise_hat[:, np.newaxis], rtol=1, atol=5
+        )  # TODO: decide threshold
+    
+    # residual error check
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(
+            noise, noise_hat[:, np.newaxis], rtol=1, atol=5
+        )  # TODO: decide threshold
 
  
