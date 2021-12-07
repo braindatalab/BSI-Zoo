@@ -390,7 +390,7 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
               threshold=1e-5, gammas=None, group_size=1):
     """Gamma_map method based on MNE package
 
@@ -476,7 +476,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
 
     if update_mode == 2:
         denom_fun = np.sqrt
-    elif update_mode == 1:
+    elif update_mode == 1 or update_mode == 3:
         # do nothing
         def denom_fun(x):
             return x
@@ -515,6 +515,10 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
             # convex-bounding update
             numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
             denom = np.sum(L * Sigma_y_invL, axis=0)  # sqrt is applied below
+        elif update_mode == 3:
+            # Expectation Maximization (EM) update
+            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) \
+                + gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0))
         else:
             raise ValueError('Invalid value for update_mode')
 
