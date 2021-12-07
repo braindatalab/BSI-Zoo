@@ -390,7 +390,7 @@ def iterative_L2_typeII(
     return x
 
 
-def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
+def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=2,
               threshold=1e-5, gammas=None, group_size=1):
     """Gamma_map method based on MNE package
 
@@ -510,6 +510,29 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
         Sigma_y_invL = np.dot(Sigma_y_inv, L)
         A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
 
+        # heteroscedastic update rule
+        W = np.dot(np.diag(gammas), np.dot(L.T, Sigma_y_inv))
+        x_bar = np.dot(W, y)
+        residual = y - np.dot(L, x_bar)
+
+        M_noise = np.dot(residual, residual.T) / n_times
+        # cov = np.diag(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
+        alpha_heterosc = np.mean(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
+
+        # different versions of the implementations
+        # Ver I
+        M_N = linalg.norm(y - np.dot(L, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
+        Lambda = np.diag(np.sqrt(np.divide(M_N, Sigma_y_inv)))
+        alpha_homosc_ver1 = np.mean(np.diag(Lambda))
+
+        # Ver II
+        # homoscedastic update rule
+        LW = np.identity(n_sensors)-np.dot(L,W)
+        Cyy = np.dot(y, y.T) / n_times
+        noise_numer = np.mean(np.sum(np.dot(np.dot(LW,Cyy),LW),1))
+        noise_denom = np.mean(np.diag(Sigma_y_inv))
+        alpha_homosc_ver2 = np.sqrt(noise_numer / noise_denom)
+
         if update_mode == 1:
             # MacKay fixed point update
             numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1)
@@ -524,6 +547,40 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
                 + gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0))
         else:
             raise ValueError('Invalid value for update_mode')
+
+       # learn the regularization parameter (noise variance)
+        noise_update_mode = 0
+
+        if noise_update_mode == 0:
+            # do nothing : conventinal champagne
+            pass
+        elif noise_update_mode == 0.5:
+            # homoscedastic learning
+            Sigma_X_diag = gammas * (1 - gammas * np.sum(L * Sigma_y_invL, axis=0));  # posterior covariance
+            numer_noise = linalg.norm(y- np.dot(L, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
+            denom_noise = n_sensors - len(active_set) + np.sum(np.divide(Sigma_X_diag,gammas))
+            alpha = numer_noise / denom_noise
+        elif noise_update_mode == 1:
+            # homoscedastic learning (using special case of heteroscedastic learning)
+            M_N = linalg.norm(y - np.dot(L, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
+            Lambda = np.diag(np.sqrt(np.divide(M_N, Sigma_y_invL)))
+            alpha = np.mean(np.diag(Lambda))
+        elif noise_update_mode == 2:
+            # heteroscedastic learning
+            M_N = linalg.norm(y - np.dot(L, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
+            Lambda = np.diag(np.sqrt(np.divide(M_N, Sigma_y_invL)))
+        elif noise_update_mode == 3:
+            # Full-structural noise (FUN) learning (TODO: Try different implementation methods)
+            M_N = linalg.norm(y - np.dot(L, gammas[:, None] * A), ord = 'fro') ** 2 / n_times
+            Lambda = np.matmul(np.matmul(linalg.sqrtm(Sigma_y),linalg.sqrtm(np.matmul(np.matmul(linalg.sqrtm(Sigma_y),M_N),linalg.sqrtm(Sigma_y)))),linalg.sqrtm(Sigma_y))
+        elif noise_update_mode == 4:
+            pass
+            # Spatial CV
+            # (hint) using sklearn gridsearch and model selection built-in functions for tuning the hyperparamters.
+        elif noise_update_mode == 5:
+            pass
+            # Temporal CV
+            # (hint) using the type-II loss as a metric for minimizing the Bregman distanct
 
         if group_size == 1:
             if denom is None:
