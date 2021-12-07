@@ -90,4 +90,46 @@ def test_estimator(
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
+   # residual error check
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(
+            noise, noise_hat[:, np.newaxis], rtol=1, atol=5
+        )  # TODO: decide threshold
+
+    # visualisation
+    if visualise and path_to_leadfield is not None and n_times > 1:
+        from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+        from mne import read_forward_solution
+        from mne.viz import plot_sparse_source_estimates
+        import mne
+
+        fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+        fwd = read_forward_solution(fwd_fname)
+        fwd = mne.convert_forward_solution(fwd, force_fixed=True)
+
+        active_set = np.linalg.norm(x, axis=1) != 0
+        active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
+
+        stc = _make_sparse_stc(
+            x[active_set], active_set, fwd, tmin=1, tstep=1
+        )  # ground truth
+        stc_hat = _make_sparse_stc(
+            x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+        )  # estimate
+
+        plot_sparse_source_estimates(
+            fwd["src"],
+            [stc, stc_hat],
+            bgcolor=(1, 1, 1),
+            opacity=0.1,
+            fig_name=solver.__name__,
+            # labels=[np.asarray(['Ground truth']), np.asarray(['Estimate'])]
+        )
+
+        import pdb
+
+        pdb.set_trace()
+
  
