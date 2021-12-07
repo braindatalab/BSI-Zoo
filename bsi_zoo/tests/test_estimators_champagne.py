@@ -55,7 +55,6 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     return y, L, x, cov_scaled, noise_scaled
 
 
-@pytest.mark.parametrize("update_mode", [1, 2, 3])
 @pytest.mark.parametrize("n_times", [1, 10])
 @pytest.mark.parametrize(
     "path_to_leadfield", [None, "bsi_zoo/tests/data/lead_field_CC120166.npz"]

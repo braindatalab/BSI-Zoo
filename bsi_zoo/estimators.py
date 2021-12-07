@@ -476,11 +476,13 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
 
     if update_mode == 2:
         denom_fun = np.sqrt
-    elif update_mode == 1 or update_mode == 3:
+    elif update_mode == 1:
         # do nothing
         def denom_fun(x):
             return x
-    else: 
+    elif update_mode == 3:
+        denom = None
+    else:
         denom = None
 
     last_size = -1
@@ -506,6 +508,7 @@ def gamma_map(L, y, cov=1., alpha=0.2, max_iter=1000, tol=1e-15, update_mode=3,
 
         Sigma_y_inv = np.dot(U / (S + eps), U.T)
         Sigma_y_invL = np.dot(Sigma_y_inv, L)
+        A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
 
         if update_mode == 1:
             # MacKay fixed point update
