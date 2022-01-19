@@ -61,9 +61,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
 
 
 @pytest.mark.parametrize("n_times", [1, 10])
-@pytest.mark.parametrize(
-    "path_to_leadfield", [None]
-)
+@pytest.mark.parametrize("path_to_leadfield", [None])
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -112,6 +110,4 @@ def test_estimator(
         if n_times > 1:
             np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
         else:
-            np.testing.assert_allclose(
-                noise, noise_hat[:, np.newaxis], rtol=1, atol=5
-            )
+            np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
