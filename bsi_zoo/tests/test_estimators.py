@@ -62,7 +62,9 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
 
 
 @pytest.mark.parametrize("n_times", [1, 10])
-@pytest.mark.parametrize("path_to_leadfield", [None, "bsi_zoo/tests/data/lead_field_CC120166.npz"])
+@pytest.mark.parametrize(
+    "path_to_leadfield", [None, "bsi_zoo/tests/data/lead_field_CC120166.npz"]
+)
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -112,12 +114,11 @@ def test_estimator(
             np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
         else:
             np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
-    
+
     else:
         if n_times > 1:
             from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
             from mne import read_forward_solution, convert_forward_solution
-        
 
             fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
             fwd = read_forward_solution(fwd_fname)
@@ -132,14 +133,35 @@ def test_estimator(
             stc_hat = _make_sparse_stc(
                 x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
             )  # estimate
-            
+
             # euclidean distance check
-            
-            for hemishpere_index in [0, 1]: # 0->lh, 1->rh
-                hemisphere, hemisphere_hat = stc.vertices[hemishpere_index], stc_hat.vertices[hemishpere_index]
-                for vertice_index, vertice_index_hat in zip(hemisphere, hemisphere_hat):
-                    coordinates = fwd['src'][hemishpere_index]['rr'][vertice_index]
-                    coordinates_hat = fwd['src'][hemishpere_index]['rr'][vertice_index_hat]
-                    euclidean_distance = np.linalg.norm(coordinates-coordinates_hat)
-                    #TODO: account for multiple vertices estimated in each time step
-                    1/0
+            # supports only nnz=1 case
+
+            for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                hemisphere, hemisphere_hat = (
+                    stc.vertices[hemishpere_index],
+                    stc_hat.vertices[hemishpere_index],
+                )
+                if (
+                    hemisphere.any() and hemisphere_hat.any()
+                ):  # if that hemisphere has a source
+                    vertice_index = hemisphere[0]
+                    # find peak amplitude vertex in estimated
+                    peak_vertex, peak_time = stc_hat.get_peak(
+                        hemi=hemi_, vert_as_index=True, time_as_index=True
+                    )
+                    vertice_index_hat = (
+                        stc_hat.lh_vertno[peak_vertex]
+                        if hemi_ == "lh"
+                        else stc_hat.rh_vertno[peak_vertex]
+                    )
+
+                    # for vertice_index, vertice_index_hat in zip(hemisphere, hemisphere_hat):
+                    coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
+                    coordinates_hat = fwd["src"][hemishpere_index]["rr"][
+                        vertice_index_hat
+                    ]
+                    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
+
+                    np.testing.assert_array_less(euclidean_distance, 0.1)
+                    #     #TODO: decide threshold for euclidean distance
