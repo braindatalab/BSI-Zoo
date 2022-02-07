@@ -97,6 +97,12 @@ def test_estimator(
 
     noise_hat = y - (L @ x_hat)
 
+    # residual error check
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
+
     # np.testing.assert_array_less(
     #     np.linalg.norm(
     #         peak_local_max(x, num_peaks=1) - peak_local_max(x_hat, num_peaks=1)
@@ -108,12 +114,6 @@ def test_estimator(
     if path_to_leadfield is None:
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
-
-        # residual error check
-        if n_times > 1:
-            np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
-        else:
-            np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
 
     else:
         if n_times > 1:
