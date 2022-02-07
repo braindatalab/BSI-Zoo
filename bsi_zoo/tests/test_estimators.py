@@ -156,7 +156,6 @@ def test_estimator(
                         else stc_hat.rh_vertno[peak_vertex]
                     )
 
-                    # for vertice_index, vertice_index_hat in zip(hemisphere, hemisphere_hat):
                     coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
                     coordinates_hat = fwd["src"][hemishpere_index]["rr"][
                         vertice_index_hat
@@ -164,4 +163,49 @@ def test_estimator(
                     euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
 
                     np.testing.assert_array_less(euclidean_distance, 0.1)
-                    #     #TODO: decide threshold for euclidean distance
+                    # TODO: decide threshold for euclidean distance
+
+        else:
+            # for n_times = 1
+            from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+            from mne import read_forward_solution, convert_forward_solution
+
+            fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+            fwd = read_forward_solution(fwd_fname)
+            fwd = convert_forward_solution(fwd, force_fixed=True)
+
+            active_set = x != 0
+            active_set_hat = x_hat != 0
+
+            stc = _make_sparse_stc(
+                x[active_set], active_set, fwd, tmin=1, tstep=1
+            )  # ground truth
+            stc_hat = _make_sparse_stc(
+                x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+            )  # estimate
+
+            for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                hemisphere, hemisphere_hat = (
+                    stc.vertices[hemishpere_index],
+                    stc_hat.vertices[hemishpere_index],
+                )
+                if (
+                    hemisphere.any() and hemisphere_hat.any()
+                ):  # if that hemisphere has a source
+                    vertice_index = hemisphere[0]
+                    vertice_index_hat = hemisphere_hat[0]
+
+                    coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
+                    coordinates_hat = fwd["src"][hemishpere_index]["rr"][
+                        vertice_index_hat
+                    ]
+                    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
+
+                    np.testing.assert_array_less(euclidean_distance, 0.1)
+                    # TODO: decide threshold for euclidean distance
+
+    # if visualise:
+    #     1/0
+    #     solver.__name__
+    #     # name = method name + x + n_times
+    #     # save files
