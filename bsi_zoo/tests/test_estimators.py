@@ -77,7 +77,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     ],
 )
 def test_estimator(
-    n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield, visualise=True
+    n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield, save_estimates=True
 ):
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
@@ -204,8 +204,15 @@ def test_estimator(
                     np.testing.assert_array_less(euclidean_distance, 0.1)
                     # TODO: decide threshold for euclidean distance
 
-    # if visualise:
-    #     1/0
-    #     solver.__name__
-    #     # name = method name + x + n_times
-    #     # save files
+        if save_estimates:
+
+            import os
+
+            PATH_TO_SAVE_ESTIMATES = (
+                "/home/anujanegi/tj/bdsg/BSI-Zoo/bsi_zoo/tests/data/estimates"
+            )
+            x_name = solver.__name__ + "_x_" + str(n_times) + ".npy"
+            x_hat_name = solver.__name__ + "_x_hat" + str(n_times) + ".npy"
+            # save files
+            np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_name), x)
+            np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_hat_name), x_hat)
