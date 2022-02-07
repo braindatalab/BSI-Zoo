@@ -212,7 +212,7 @@ def test_estimator(
                 "/home/anujanegi/tj/bdsg/BSI-Zoo/bsi_zoo/tests/data/estimates"
             )
             x_name = solver.__name__ + "_x_" + str(n_times) + ".npy"
-            x_hat_name = solver.__name__ + "_x_hat" + str(n_times) + ".npy"
+            x_hat_name = solver.__name__ + "_x_hat_" + str(n_times) + ".npy"
             # save files
             np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_name), x)
             np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_hat_name), x_hat)
