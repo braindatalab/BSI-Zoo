@@ -1,8 +1,6 @@
-from _pytest.fixtures import _eval_scope_callable
 import numpy as np
 from scipy import linalg
 import pytest
-from skimage.feature import peak_local_max
 
 from bsi_zoo.estimators import (
     iterative_L1,
