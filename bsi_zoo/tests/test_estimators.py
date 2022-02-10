@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import linalg
 import pytest
-from skimage.feature import peak_local_max
 
 from bsi_zoo.estimators import (
     iterative_L1,
@@ -49,8 +48,8 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     noise_normalised = noise / noise_norm
 
     alpha = 0.99  # 40dB snr
-    noise_scaled = (1 - alpha / alpha) * signal_norm * noise_normalised
-    cov_scaled = cov * ((1 - alpha / alpha) * (signal_norm / noise_norm)) ** 2
+    noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
+    cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
     y += noise_scaled
 
     if n_times == 1:
@@ -76,7 +75,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     ],
 )
 def test_estimator(
-    n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield, visualise=True
+    n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield, save_estimates=True
 ):
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
@@ -96,56 +95,116 @@ def test_estimator(
 
     noise_hat = y - (L @ x_hat)
 
-    # np.testing.assert_array_less(
-    #     np.linalg.norm(
-    #         peak_local_max(x, num_peaks=1) - peak_local_max(x_hat, num_peaks=1)
-    #     ),
-    #     1.1,
-    # )
-    # FIXME: do euclidean distance check with distance matrix
+    # residual error check
+    if n_times > 1:
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
+    else:
+        np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
 
     if path_to_leadfield is None:
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
-    # residual error check
-    if n_times > 1:
-        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
     else:
-        np.testing.assert_allclose(
-            noise, noise_hat[:, np.newaxis], rtol=1, atol=5
-        )  # TODO: decide threshold
+        if n_times > 1:
+            from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+            from mne import read_forward_solution, convert_forward_solution
 
-    # visualisation
-    if visualise and path_to_leadfield is not None and n_times > 1:
-        from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
-        from mne import read_forward_solution
-        from mne.viz import plot_sparse_source_estimates
-        import mne
+            fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+            fwd = read_forward_solution(fwd_fname)
+            fwd = convert_forward_solution(fwd, force_fixed=True)
 
-        fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
-        fwd = read_forward_solution(fwd_fname)
-        fwd = mne.convert_forward_solution(fwd, force_fixed=True)
+            active_set = np.linalg.norm(x, axis=1) != 0
+            active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
 
-        active_set = np.linalg.norm(x, axis=1) != 0
-        active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
+            stc = _make_sparse_stc(
+                x[active_set], active_set, fwd, tmin=1, tstep=1
+            )  # ground truth
+            stc_hat = _make_sparse_stc(
+                x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+            )  # estimate
 
-        stc = _make_sparse_stc(
-            x[active_set], active_set, fwd, tmin=1, tstep=1
-        )  # ground truth
-        stc_hat = _make_sparse_stc(
-            x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
-        )  # estimate
+            # euclidean distance check
+            # supports only nnz=1 case
 
-        plot_sparse_source_estimates(
-            fwd["src"],
-            [stc, stc_hat],
-            bgcolor=(1, 1, 1),
-            opacity=0.1,
-            fig_name=solver.__name__,
-            # labels=[np.asarray(['Ground truth']), np.asarray(['Estimate'])]
-        )
+            for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                hemisphere, hemisphere_hat = (
+                    stc.vertices[hemishpere_index],
+                    stc_hat.vertices[hemishpere_index],
+                )
+                if (
+                    hemisphere.any() and hemisphere_hat.any()
+                ):  # if that hemisphere has a source
+                    vertice_index = hemisphere[0]
+                    # find peak amplitude vertex in estimated
+                    peak_vertex, peak_time = stc_hat.get_peak(
+                        hemi=hemi_, vert_as_index=True, time_as_index=True
+                    )
+                    vertice_index_hat = (
+                        stc_hat.lh_vertno[peak_vertex]
+                        if hemi_ == "lh"
+                        else stc_hat.rh_vertno[peak_vertex]
+                    )
 
-        import pdb
+                    coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
+                    coordinates_hat = fwd["src"][hemishpere_index]["rr"][
+                        vertice_index_hat
+                    ]
+                    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
 
-        pdb.set_trace()
+                    np.testing.assert_array_less(euclidean_distance, 0.1)
+                    # TODO: decide threshold for euclidean distance
+
+        else:
+            # for n_times = 1
+            from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+            from mne import read_forward_solution, convert_forward_solution
+
+            fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+            fwd = read_forward_solution(fwd_fname)
+            fwd = convert_forward_solution(fwd, force_fixed=True)
+
+            active_set = x != 0
+            active_set_hat = x_hat != 0
+
+            stc = _make_sparse_stc(
+                x[active_set], active_set, fwd, tmin=1, tstep=1
+            )  # ground truth
+            stc_hat = _make_sparse_stc(
+                x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+            )  # estimate
+
+            for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                hemisphere, hemisphere_hat = (
+                    stc.vertices[hemishpere_index],
+                    stc_hat.vertices[hemishpere_index],
+                )
+                if (
+                    hemisphere.any() and hemisphere_hat.any()
+                ):  # if that hemisphere has a source
+                    vertice_index = hemisphere[0]
+                    vertice_index_hat = hemisphere_hat[0]
+
+                    coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
+                    coordinates_hat = fwd["src"][hemishpere_index]["rr"][
+                        vertice_index_hat
+                    ]
+                    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
+
+                    np.testing.assert_array_less(euclidean_distance, 0.1)
+                    # TODO: decide threshold for euclidean distance
+
+        if save_estimates:
+
+            import os
+
+            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates"
+
+            if not os.path.exists(PATH_TO_SAVE_ESTIMATES):
+                os.makedirs(PATH_TO_SAVE_ESTIMATES)
+
+            x_name = solver.__name__ + "_x_" + str(n_times) + ".npy"
+            x_hat_name = solver.__name__ + "_x_hat_" + str(n_times) + ".npy"
+            # save files
+            np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_name), x)
+            np.save(os.path.join(PATH_TO_SAVE_ESTIMATES, x_hat_name), x_hat)
