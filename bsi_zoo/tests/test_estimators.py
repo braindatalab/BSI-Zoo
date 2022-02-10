@@ -198,9 +198,11 @@ def test_estimator(
 
             import os
 
-            PATH_TO_SAVE_ESTIMATES = (
-                "/home/anujanegi/tj/bdsg/BSI-Zoo/bsi_zoo/tests/data/estimates"
-            )
+            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates"
+
+            if not os.path.exists(PATH_TO_SAVE_ESTIMATES):
+                os.makedirs(PATH_TO_SAVE_ESTIMATES)
+
             x_name = solver.__name__ + "_x_" + str(n_times) + ".npy"
             x_hat_name = solver.__name__ + "_x_hat_" + str(n_times) + ".npy"
             # save files
