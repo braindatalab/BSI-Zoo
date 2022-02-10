@@ -101,14 +101,6 @@ def test_estimator(
     else:
         np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
 
-    # np.testing.assert_array_less(
-    #     np.linalg.norm(
-    #         peak_local_max(x, num_peaks=1) - peak_local_max(x_hat, num_peaks=1)
-    #     ),
-    #     1.1,
-    # )
-    # FIXME: do euclidean distance check with distance matrix
-
     if path_to_leadfield is None:
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
