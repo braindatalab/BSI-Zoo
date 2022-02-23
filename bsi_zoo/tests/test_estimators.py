@@ -61,7 +61,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
 
 @pytest.mark.parametrize("n_times", [1, 10])
 @pytest.mark.parametrize(
-    "path_to_leadfield", [None, "bsi_zoo/tests/data/lead_field_CC120166.npz"]
+    "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
 )
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
@@ -75,7 +75,7 @@ def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfie
     ],
 )
 def test_estimator(
-    n_times, solver, alpha, rtol, atol, cov_type, path_to_leadfield, save_estimates=True
+    n_times, solver, alpha, rtol, atol, cov_type, subject, save_estimates=True
 ):
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
@@ -83,7 +83,9 @@ def test_estimator(
         n_sources=200,
         nnz=1,
         cov_type=cov_type,
-        path_to_leadfield=path_to_leadfield,
+        path_to_leadfield=None
+        if subject is None
+        else "bsi_zoo/tests/data/lead_field_%s.npz" % subject,
     )
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
@@ -101,7 +103,8 @@ def test_estimator(
     else:
         np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
 
-    if path_to_leadfield is None:
+    if subject is None:
+        # dummy data case
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
@@ -110,7 +113,7 @@ def test_estimator(
             from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
             from mne import read_forward_solution, convert_forward_solution
 
-            fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+            fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
             fwd = read_forward_solution(fwd_fname)
             fwd = convert_forward_solution(fwd, force_fixed=True)
 
@@ -160,7 +163,7 @@ def test_estimator(
             from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
             from mne import read_forward_solution, convert_forward_solution
 
-            fwd_fname = "bsi_zoo/tests/data/CC120166-fwd.fif"
+            fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
             fwd = read_forward_solution(fwd_fname)
             fwd = convert_forward_solution(fwd, force_fixed=True)
 
@@ -198,7 +201,7 @@ def test_estimator(
 
             import os
 
-            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates"
+            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates/%s" % subject
 
             if not os.path.exists(PATH_TO_SAVE_ESTIMATES):
                 os.makedirs(PATH_TO_SAVE_ESTIMATES)
