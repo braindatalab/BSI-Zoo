@@ -31,3 +31,5 @@ tags
 *.npz
 *.fif
 *.ipynb
+*.zip
+figures
