@@ -12,80 +12,128 @@ from bsi_zoo.estimators import (
 )
 
 
-def _generate_data(n_sensors, n_times, n_sources, nnz, cov_type, path_to_leadfield):
-    rng = np.random.RandomState(42)
-    if path_to_leadfield is not None:
-        lead_field = np.load(path_to_leadfield, allow_pickle=True)
-        L = lead_field["lead_field"]
-        n_sensors, n_sources = L.shape
-    else:
-        L = rng.randn(n_sensors, n_sources)  # TODO: add orientation support
+def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_to_leadfield, orientation_type='fixed'):
+    if orientation_type == 'fixed':
+        rng = np.random.RandomState(42)
+        if path_to_leadfield is not None:
+            lead_field = np.load(path_to_leadfield, allow_pickle=True)
+            L = lead_field["lead_field"]
+            n_sensors, n_sources = L.shape
+        else:
+            L = rng.randn(n_sensors, n_sources)
 
-    x = np.zeros((n_sources, n_times))
-    x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
-    # x[:nnz] = rng.randn(nnz, n_times)
-    y = L @ x
+        x = np.zeros((n_sources, n_times))
+        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
+        # x[:nnz] = rng.randn(nnz, n_times)
+        y = L @ x
 
-    noise_type = "random"
-    if cov_type == "diag":
-        if noise_type == "random":
-            # initialization of the noise covariance matrix with a random diagonal matrix
+        noise_type = "random"
+        if cov_type == "diag":
+            if noise_type == "random":
+                # initialization of the noise covariance matrix with a random diagonal matrix
+                cov = rng.randn(n_sensors, n_sensors)
+                cov = 1e-3 * (cov @ cov.T)
+                cov = np.diag(np.diag(cov))
+            else:
+                # initialization of the noise covariance with an identity matrix
+                cov = 1e-2 * np.diag(np.ones(n_sensors))
+        else:
+            # initialization of the noise covariance matrix with a full PSD random matrix
             cov = rng.randn(n_sensors, n_sensors)
             cov = 1e-3 * (cov @ cov.T)
-            cov = np.diag(np.diag(cov))
+            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+
+        signal_norm = np.linalg.norm(y, "fro")
+        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
+        noise_norm = np.linalg.norm(noise, "fro")
+        noise_normalised = noise / noise_norm
+
+        alpha = 0.99  # 40dB snr
+        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
+        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
+        y += noise_scaled
+
+        if n_times == 1:
+            y = y[:, 0]
+            x = x[:, 0]
+    
+    elif orientation_type == 'free':
+        
+        rng = np.random.RandomState(35)
+        if path_to_leadfield is not None:
+            lead_field = np.load(path_to_leadfield, allow_pickle=True)
+            L = lead_field["lead_field"]
+            n_sensors, n_sources = L.shape
         else:
-            # initialization of the noise covariance with an identity matrix
-            cov = 1e-2 * np.diag(np.ones(n_sensors))
-    else:
-        # initialization of the noise covariance matrix with a full PSD random matrix
-        cov = rng.randn(n_sensors, n_sensors)
-        cov = 1e-3 * (cov @ cov.T)
-        # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+            L = rng.randn(n_sensors, n_sources)
+        
+        x = np.zeros((n_sources, n_times, n_orient))
+        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times, n_orient)
+        y = np.tensordot(L, x, axes=1)
 
-    signal_norm = np.linalg.norm(y, "fro")
-    noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-    noise_norm = np.linalg.norm(noise, "fro")
-    noise_normalised = noise / noise_norm
+        noise_type = "random"
+        if cov_type == "diag":
+            if noise_type == "random":
+                # initialization of the noise covariance matrix with a random diagonal matrix
+                cov = rng.randn(n_sensors, n_sensors)
+                cov = 1e-3 * (cov @ cov.T)
+                cov = np.diag(np.diag(cov))
+            else:
+                # initialization of the noise covariance with an identity matrix
+                cov = 1e-2 * np.diag(np.ones(n_sensors))
+        else:
+            # initialization of the noise covariance matrix with a full PSD random matrix
+            cov = rng.randn(n_sensors, n_sensors)
+            cov = 1e-3 * (cov @ cov.T)
+            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
 
-    alpha = 0.99  # 40dB snr
-    noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
-    cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
-    y += noise_scaled
+        signal_norm = np.linalg.norm(y, axis=None)
+        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=(n_orient, n_times)).T
+        noise_norm = np.linalg.norm(noise, axis=None)
+        noise_normalised = noise / noise_norm
 
-    if n_times == 1:
-        y = y[:, 0]
-        x = x[:, 0]
+        alpha = 0.99  # 40dB snr
+        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
+        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
+        y += noise_scaled
 
+        # if n_times == 1:
+        #     y = y[:, 0]
+        #     x = x[:, 0]
+    # 1/0        
     return y, L, x, cov_scaled, noise_scaled
 
 
-@pytest.mark.parametrize("n_times", [1, 10])
+@pytest.mark.parametrize("n_times", [10])
+@pytest.mark.parametrize("orientation_type", ["free"])
 @pytest.mark.parametrize(
     "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
 )
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
-        (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
-        (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
-        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
-        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
+        # (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
+        # (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
+        # (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
+        # (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
+        # (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
     ],
 )
 def test_estimator(
-    n_times, solver, alpha, rtol, atol, cov_type, subject, save_estimates=True
+    n_times, solver, alpha, rtol, atol, cov_type, subject, orientation_type, save_estimates=False
 ):
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
         n_times=n_times,
         n_sources=200,
+        n_orient=3,
         nnz=1,
         cov_type=cov_type,
         path_to_leadfield=None
         if subject is None
         else "bsi_zoo/tests/data/lead_field_%s.npz" % subject,
+        orientation_type=orientation_type,
     )
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
