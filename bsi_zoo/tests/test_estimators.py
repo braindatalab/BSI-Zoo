@@ -115,7 +115,9 @@ def _generate_data(
         # if n_times == 1:
         #     y = y[:, 0]
         #     x = x[:, 0]
-    # 1/0
+        
+        # reshaping L to (n_sensors, n_sources*n_orient)
+        L = L.reshape(L.shape[0], -1)
     return y, L, x, cov_scaled, noise_scaled
 
 
