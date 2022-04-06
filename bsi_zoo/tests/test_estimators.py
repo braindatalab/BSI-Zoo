@@ -12,8 +12,17 @@ from bsi_zoo.estimators import (
 )
 
 
-def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_to_leadfield, orientation_type='fixed'):
-    if orientation_type == 'fixed':
+def _generate_data(
+    n_sensors,
+    n_times,
+    n_sources,
+    n_orient,
+    nnz,
+    cov_type,
+    path_to_leadfield,
+    orientation_type="fixed",
+):
+    if orientation_type == "fixed":
         rng = np.random.RandomState(42)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)
@@ -56,20 +65,26 @@ def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_
         if n_times == 1:
             y = y[:, 0]
             x = x[:, 0]
-    
-    elif orientation_type == 'free':
-        
+
+    elif orientation_type == "free":
+
         rng = np.random.RandomState(35)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)
             L = lead_field["lead_field"]
             n_sensors, n_sources = L.shape
         else:
-            L = rng.randn(n_sensors, n_sources)
-        
-        x = np.zeros((n_sources, n_times, n_orient))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times, n_orient)
-        y = np.tensordot(L, x, axes=1)
+            L = rng.randn(n_sensors, n_orient, n_sources)
+
+        x = np.zeros((n_sources, n_orient, n_times))
+        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(
+            nnz, n_orient, n_times
+        )
+        y = np.einsum("nrm, mrd->nd", L, x)
+        # y = np.tensordot(L, x, axes=1)
+        # 1/0
+        # TODO: y should be 50*10
+        # TODO: L should be 3*50*200
 
         noise_type = "random"
         if cov_type == "diag":
@@ -87,9 +102,9 @@ def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_
             cov = 1e-3 * (cov @ cov.T)
             # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
 
-        signal_norm = np.linalg.norm(y, axis=None)
-        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=(n_orient, n_times)).T
-        noise_norm = np.linalg.norm(noise, axis=None)
+        signal_norm = np.linalg.norm(y, "fro")
+        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
+        noise_norm = np.linalg.norm(noise, "fro")
         noise_normalised = noise / noise_norm
 
         alpha = 0.99  # 40dB snr
@@ -100,15 +115,13 @@ def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_
         # if n_times == 1:
         #     y = y[:, 0]
         #     x = x[:, 0]
-    # 1/0        
+    # 1/0
     return y, L, x, cov_scaled, noise_scaled
 
 
 @pytest.mark.parametrize("n_times", [10])
 @pytest.mark.parametrize("orientation_type", ["free"])
-@pytest.mark.parametrize(
-    "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
-)
+@pytest.mark.parametrize("subject", [None])  # don't have 3 orientation leadfield
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -121,7 +134,15 @@ def _generate_data(n_sensors, n_times, n_sources, n_orient, nnz, cov_type, path_
     ],
 )
 def test_estimator(
-    n_times, solver, alpha, rtol, atol, cov_type, subject, orientation_type, save_estimates=False
+    n_times,
+    solver,
+    alpha,
+    rtol,
+    atol,
+    cov_type,
+    subject,
+    orientation_type,
+    save_estimates=False,
 ):
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
