@@ -443,7 +443,7 @@ def gamma_map(
     XXX
     """
     eps = np.finfo(float).eps
-    n_sensors, n_orient, n_sources = L.shape
+    n_sensors, n_sources, n_orient = L.shape
     if y.ndim < 2:
         y = y[:, np.newaxis]
     n_times = y.shape[1]

@@ -74,13 +74,13 @@ def _generate_data(
             L = lead_field["lead_field"]
             n_sensors, n_sources = L.shape
         else:
-            L = rng.randn(n_sensors, n_orient, n_sources)
+            L = rng.randn(n_sensors, n_sources, n_orient)
 
         x = np.zeros((n_sources, n_orient, n_times))
         x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(
             nnz, n_orient, n_times
         )
-        y = np.einsum("nrm, mrd->nd", L, x)
+        y = np.einsum("nmr, mrd->nd", L, x)
         # y = np.tensordot(L, x, axes=1)
         # 1/0
         # TODO: y should be 50*10
