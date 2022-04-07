@@ -121,7 +121,7 @@ def _generate_data(
     return y, L, x, cov_scaled, noise_scaled
 
 
-@pytest.mark.parametrize("n_times", [10])
+@pytest.mark.parametrize("n_times", [1, 10])
 @pytest.mark.parametrize("orientation_type", ["free"])
 @pytest.mark.parametrize("subject", [None])  # don't have 3 orientation leadfield
 @pytest.mark.parametrize(
@@ -131,7 +131,7 @@ def _generate_data(
         # (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
         # (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
         # (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
-        # (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
+        (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
     ],
 )
@@ -166,20 +166,23 @@ def test_estimator(
     else:
         x_hat = solver(L, y, cov, alpha=alpha)
 
-    noise_hat = y - (L @ x_hat)
+    x_hat = x_hat.reshape(x.shape)
+    L = L.reshape(-1, x.shape[0], x.shape[1])
+    # 1/0
+    noise_hat = y - np.einsum("nmr, mrd->nd", L, x_hat)
 
     # residual error check
     if n_times > 1:
         np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
     else:
-        np.testing.assert_allclose(noise, noise_hat[:, np.newaxis], rtol=1, atol=5)
+        np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
 
     if subject is None:
         # dummy data case
         np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
-    else:
+    elif subject is not None and orientation_type == 'fixed':  # subject data is only available for fixed orientations
         if n_times > 1:
             from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
             from mne import read_forward_solution, convert_forward_solution
