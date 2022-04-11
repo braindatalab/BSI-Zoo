@@ -81,10 +81,6 @@ def _generate_data(
             nnz, n_orient, n_times
         )
         y = np.einsum("nmr, mrd->nd", L, x)
-        # y = np.tensordot(L, x, axes=1)
-        # 1/0
-        # TODO: y should be 50*10
-        # TODO: L should be 3*50*200
 
         noise_type = "random"
         if cov_type == "diag":
@@ -115,22 +111,25 @@ def _generate_data(
         # if n_times == 1:
         #     y = y[:, 0]
         #     x = x[:, 0]
-        
+
         # reshaping L to (n_sensors, n_sources*n_orient)
         L = L.reshape(L.shape[0], -1)
+
     return y, L, x, cov_scaled, noise_scaled
 
 
 @pytest.mark.parametrize("n_times", [1, 10])
-@pytest.mark.parametrize("orientation_type", ["free"])
-@pytest.mark.parametrize("subject", [None])  # don't have 3 orientation leadfield
+@pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+@pytest.mark.parametrize(
+    "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
+)  # don't have 3 orientation leadfield
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
-        # (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
-        # (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
-        # (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
-        # (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
+        (iterative_L1, 0.1, 1e-1, 5e-1, "diag"),
+        (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
+        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
         (iterative_L2_typeII, 0.2, 1e-1, 1e-1, "full"),
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
     ],
@@ -146,6 +145,10 @@ def test_estimator(
     orientation_type,
     save_estimates=False,
 ):
+
+    if subject is not None and orientation_type == "free":
+        pytest.skip("Subject data is currently only available for fixed orientations.")
+
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
         n_times=n_times,
@@ -166,10 +169,14 @@ def test_estimator(
     else:
         x_hat = solver(L, y, cov, alpha=alpha)
 
-    x_hat = x_hat.reshape(x.shape)
-    L = L.reshape(-1, x.shape[0], x.shape[1])
-    # 1/0
-    noise_hat = y - np.einsum("nmr, mrd->nd", L, x_hat)
+    if orientation_type == "free":
+        x_hat = x_hat.reshape(x.shape)
+        L = L.reshape(-1, x.shape[0], x.shape[1])
+        noise_hat = y - np.einsum("nmr, mrd->nd", L, x_hat)
+    elif orientation_type == "fixed":
+        noise_hat = y - (L @ x_hat)
+        if n_times < 2:
+            noise_hat = noise_hat[:, np.newaxis]
 
     # residual error check
     if n_times > 1:
@@ -179,10 +186,13 @@ def test_estimator(
 
     if subject is None:
         # dummy data case
-        np.testing.assert_array_equal(x != 0, x_hat != 0)
+        if (
+            orientation_type == "fixed"
+        ):  # test is too stringent for free orientation setting
+            np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
-    elif subject is not None and orientation_type == 'fixed':  # subject data is only available for fixed orientations
+    else:
         if n_times > 1:
             from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
             from mne import read_forward_solution, convert_forward_solution
