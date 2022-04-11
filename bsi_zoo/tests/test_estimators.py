@@ -120,9 +120,10 @@ def _generate_data(
 
 @pytest.mark.parametrize("n_times", [1, 10])
 @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+@pytest.mark.parametrize("nnz", [1, 2, 3])
 @pytest.mark.parametrize(
     "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
-)  # don't have 3 orientation leadfield
+)
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -142,21 +143,22 @@ def test_estimator(
     atol,
     cov_type,
     subject,
+    nnz,
     orientation_type,
-    save_estimates=False,
+    save_estimates=True,
 ):
 
     if subject is not None and orientation_type == "free":
         pytest.skip("Subject data is currently only available for fixed orientations.")
-    if solver != 'gamma_map' and orientation_type == 'free':
-        pytest.skip('Free orientation support only for Gamma Map solver currently.')
+    if solver != "gamma_map" and orientation_type == "free":
+        pytest.skip("Free orientation support only for Gamma Map solver currently.")
 
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
         n_times=n_times,
         n_sources=200,
         n_orient=3,
-        nnz=1,
+        nnz=nnz,
         cov_type=cov_type,
         path_to_leadfield=None
         if subject is None
@@ -287,7 +289,10 @@ def test_estimator(
 
             import os
 
-            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates/%s" % subject
+            PATH_TO_SAVE_ESTIMATES = "bsi_zoo/tests/data/estimates/nnz_%d/%s" % (
+                nnz,
+                subject,
+            )
 
             if not os.path.exists(PATH_TO_SAVE_ESTIMATES):
                 os.makedirs(PATH_TO_SAVE_ESTIMATES)
