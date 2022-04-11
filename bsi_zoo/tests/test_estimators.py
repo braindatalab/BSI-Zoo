@@ -148,6 +148,8 @@ def test_estimator(
 
     if subject is not None and orientation_type == "free":
         pytest.skip("Subject data is currently only available for fixed orientations.")
+    if solver != 'gamma_map' and orientation_type == 'free':
+        pytest.skip('Free orientation support only for Gamma Map solver currently.')
 
     y, L, x, cov, noise = _generate_data(
         n_sensors=50,
