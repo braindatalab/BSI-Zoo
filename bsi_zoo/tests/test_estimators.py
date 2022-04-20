@@ -220,7 +220,9 @@ def test_estimator(
             # TODO: support for nnz>1
             if nnz == 1:
 
-                for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                for hemishpere_index, hemi_ in zip(
+                    [0, 1], ["lh", "rh"]
+                ):  # 0->lh, 1->rh
                     hemisphere, hemisphere_hat = (
                         stc.vertices[hemishpere_index],
                         stc_hat.vertices[hemishpere_index],
@@ -243,7 +245,9 @@ def test_estimator(
                         coordinates_hat = fwd["src"][hemishpere_index]["rr"][
                             vertice_index_hat
                         ]
-                        euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
+                        euclidean_distance = np.linalg.norm(
+                            coordinates - coordinates_hat
+                        )
 
                         np.testing.assert_array_less(euclidean_distance, 0.1)
                         # TODO: decide threshold for euclidean distance
