@@ -217,34 +217,36 @@ def test_estimator(
 
             # euclidean distance check
             # supports only nnz=1 case
+            # TODO: support for nnz>1
+            if nnz == 1:
 
-            for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
-                hemisphere, hemisphere_hat = (
-                    stc.vertices[hemishpere_index],
-                    stc_hat.vertices[hemishpere_index],
-                )
-                if (
-                    hemisphere.any() and hemisphere_hat.any()
-                ):  # if that hemisphere has a source
-                    vertice_index = hemisphere[0]
-                    # find peak amplitude vertex in estimated
-                    peak_vertex, peak_time = stc_hat.get_peak(
-                        hemi=hemi_, vert_as_index=True, time_as_index=True
+                for hemishpere_index, hemi_ in zip([0, 1], ["lh", "rh"]):  # 0->lh, 1->rh
+                    hemisphere, hemisphere_hat = (
+                        stc.vertices[hemishpere_index],
+                        stc_hat.vertices[hemishpere_index],
                     )
-                    vertice_index_hat = (
-                        stc_hat.lh_vertno[peak_vertex]
-                        if hemi_ == "lh"
-                        else stc_hat.rh_vertno[peak_vertex]
-                    )
+                    if (
+                        hemisphere.any() and hemisphere_hat.any()
+                    ):  # if that hemisphere has a source
+                        vertice_index = hemisphere[0]
+                        # find peak amplitude vertex in estimated
+                        peak_vertex, peak_time = stc_hat.get_peak(
+                            hemi=hemi_, vert_as_index=True, time_as_index=True
+                        )
+                        vertice_index_hat = (
+                            stc_hat.lh_vertno[peak_vertex]
+                            if hemi_ == "lh"
+                            else stc_hat.rh_vertno[peak_vertex]
+                        )
 
-                    coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
-                    coordinates_hat = fwd["src"][hemishpere_index]["rr"][
-                        vertice_index_hat
-                    ]
-                    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
+                        coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
+                        coordinates_hat = fwd["src"][hemishpere_index]["rr"][
+                            vertice_index_hat
+                        ]
+                        euclidean_distance = np.linalg.norm(coordinates - coordinates_hat)
 
-                    np.testing.assert_array_less(euclidean_distance, 0.1)
-                    # TODO: decide threshold for euclidean distance
+                        np.testing.assert_array_less(euclidean_distance, 0.1)
+                        # TODO: decide threshold for euclidean distance
 
         else:
             # for n_times = 1
