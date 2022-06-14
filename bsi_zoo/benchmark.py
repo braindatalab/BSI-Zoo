@@ -57,7 +57,7 @@ if __name__ == "__main__":
         "n_orient": 3,
         "nnz": 3,
         "cov_type": "full",
-        "path_to_leadfield": None,
+        "path_to_leadfield": "bsi_zoo/tests/data/lead_field_%s.npz" % 'CC120166',
         "orientation_type": "fixed",
         "alpha": 0.99,
     }
