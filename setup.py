@@ -65,6 +65,6 @@ if __name__ == "__main__":
         ],
         platforms="any",
         python_requires=">=3.7",
-        install_requires=["numpy", "scipy", "scikit-learn"],
+        install_requires=["numpy", "scipy", "scikit-learn", "mne"],
         packages=package_tree("bsi_zoo"),
     )
