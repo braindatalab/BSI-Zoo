@@ -1,6 +1,6 @@
 from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import gamma_map
-from bsi_zoo.metrics import dummy2, dummy
+from bsi_zoo.metrics import dummy, jaccard_error
 import json
 
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     }
 
     data_agrs_to_benchmark = {"alpha": [0.99, 0.85, 0.8]}
-    metrics = [dummy, dummy2]  # list of metric functions here
+    metrics = [dummy]  # list of metric functions here
 
     benchmark_gamma_map = Benchmark(
         gamma_map, metrics, data_agrs, data_agrs_to_benchmark
