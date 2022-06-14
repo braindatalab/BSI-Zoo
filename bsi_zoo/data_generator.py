@@ -10,6 +10,7 @@ def get_data(
     cov_type,
     path_to_leadfield,
     orientation_type="fixed",
+    alpha=0.99,  # 40dB snr
 ):
     if orientation_type == "fixed":
         rng = np.random.RandomState(42)
@@ -46,7 +47,6 @@ def get_data(
         noise_norm = np.linalg.norm(noise, "fro")
         noise_normalised = noise / noise_norm
 
-        alpha = 0.99  # 40dB snr
         noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
         cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
         y += noise_scaled
