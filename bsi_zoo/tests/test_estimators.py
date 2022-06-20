@@ -2,6 +2,7 @@ import numpy as np
 from scipy import linalg
 import pytest
 
+from config import get_leadfield_path, get_fwd_fname
 from bsi_zoo.data_generator import get_data
 
 from bsi_zoo.estimators import (
@@ -47,14 +48,9 @@ def test_estimator(
     if solver != gamma_map and orientation_type == "free":
         pytest.skip("Free orientation support only for Gamma Map solver currently.")
 
-    # setting leadfield paths
-    if subject is None:
-        path_to_leadfield = None
-    else:
-        if orientation_type == "free":
-            path_to_leadfield = "bsi_zoo/tests/data/lead_field_free_%s.npz" % subject
-        elif orientation_type == "fixed":
-            path_to_leadfield = "bsi_zoo/tests/data/lead_field_%s.npz" % subject
+    path_to_leadfield = get_leadfield_path(
+        subject, orientation_type
+    )  # setting leadfield paths
 
     y, L, x, cov, noise = get_data(
         n_sensors=50,
@@ -103,7 +99,7 @@ def test_estimator(
                 from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
                 from mne import read_forward_solution, convert_forward_solution
 
-                fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
+                fwd_fname = get_fwd_fname(subject)
                 fwd = read_forward_solution(fwd_fname)
                 fwd = convert_forward_solution(fwd, force_fixed=True)
 
@@ -160,7 +156,7 @@ def test_estimator(
                 from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
                 from mne import read_forward_solution, convert_forward_solution
 
-                fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
+                fwd_fname = get_fwd_fname(subject)
                 fwd = read_forward_solution(fwd_fname)
                 fwd = convert_forward_solution(fwd, force_fixed=True)
 
