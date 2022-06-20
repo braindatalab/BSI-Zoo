@@ -2,7 +2,7 @@ import numpy as np
 from scipy import linalg
 import pytest
 
-from config import get_leadfield_path, get_fwd_fname
+from bsi_zoo.config import get_leadfield_path, get_fwd_fname
 from bsi_zoo.data_generator import get_data
 
 from bsi_zoo.estimators import (
@@ -97,10 +97,12 @@ def test_estimator(
         from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
         from mne import read_forward_solution, convert_forward_solution
 
+        fwd_fname = get_fwd_fname(subject)
+        fwd = read_forward_solution(fwd_fname)
+        global stc, stc_hat
+
         if orientation_type == "fixed":
             if n_times > 1:
-                fwd_fname = get_fwd_fname(subject)
-                fwd = read_forward_solution(fwd_fname)
                 fwd = convert_forward_solution(fwd, force_fixed=True)
 
                 active_set = np.linalg.norm(x, axis=1) != 0
@@ -124,10 +126,24 @@ def test_estimator(
                     x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
                 )  # estimate
 
-        elif orientation_type == "free":
+                # euclidean distance check
+                lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+                lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+                rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+                rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+                coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
+                coordinates_hat = np.concatenate(
+                    [lh_coordinates_hat, rh_coordinates_hat], axis=0
+                )
+                euclidean_distance = np.linalg.norm(
+                    coordinates - coordinates_hat, axis=1
+                )
+
+                np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+                # TODO: decide threshold for euclidean distance
+
+        else:  # orientation_type == "free":
             if n_times > 1:
-                fwd_fname = get_fwd_fname(subject)
-                fwd = read_forward_solution(fwd_fname)
                 fwd = convert_forward_solution(fwd)
 
                 active_set = np.linalg.norm(x, axis=2) != 0
@@ -149,19 +165,21 @@ def test_estimator(
                     x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
                 )  # estimate
 
-        # euclidean distance check
-        lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
-        lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
-        rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
-        rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
-        coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
-        coordinates_hat = np.concatenate(
-            [lh_coordinates_hat, rh_coordinates_hat], axis=0
-        )
-        euclidean_distance = np.linalg.norm(coordinates - coordinates_hat, axis=1)
+                # euclidean distance check
+                lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+                lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+                rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+                rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+                coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
+                coordinates_hat = np.concatenate(
+                    [lh_coordinates_hat, rh_coordinates_hat], axis=0
+                )
+                euclidean_distance = np.linalg.norm(
+                    coordinates - coordinates_hat, axis=1
+                )
 
-        np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
-        # TODO: decide threshold for euclidean distance
+                np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+                # TODO: decide threshold for euclidean distance
 
         if save_estimates:
 
