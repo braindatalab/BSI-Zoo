@@ -35,4 +35,4 @@ tags
 figures
 *.png
 
-bsi_zoo/data
+bsi_zoo/data/*
