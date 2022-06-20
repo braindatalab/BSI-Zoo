@@ -94,7 +94,7 @@ def test_estimator(
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
     else:
-        if orientation_type == "fixed":  # TODO: support for fixed orientation
+        if orientation_type == "fixed":  # TODO: support for free orientation
             if n_times > 1:
                 from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
                 from mne import read_forward_solution, convert_forward_solution
