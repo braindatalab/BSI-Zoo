@@ -94,17 +94,28 @@ def test_estimator(
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
     else:
-        if orientation_type == "fixed":  # TODO: support for free orientation
-            if n_times > 1:
-                from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
-                from mne import read_forward_solution, convert_forward_solution
+        from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+        from mne import read_forward_solution, convert_forward_solution
 
+        if orientation_type == "fixed":
+            if n_times > 1:
                 fwd_fname = get_fwd_fname(subject)
                 fwd = read_forward_solution(fwd_fname)
                 fwd = convert_forward_solution(fwd, force_fixed=True)
 
                 active_set = np.linalg.norm(x, axis=1) != 0
-                active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
+
+                # check if no vertices are estimated
+                temp = np.linalg.norm(x_hat, axis=1)
+                if len(np.unique(temp)) == 1:
+                    print("No vertices estimated!")
+
+                temp_ = np.partition(-temp, nnz)
+                max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
+
+                # remove 0 from list incase less vertices than nnz were estimated
+                max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
+                active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
 
                 stc = _make_sparse_stc(
                     x[active_set], active_set, fwd, tmin=1, tstep=1
@@ -113,55 +124,23 @@ def test_estimator(
                     x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
                 )  # estimate
 
-                # euclidean distance check
-                # supports only nnz=1 case
-                # TODO: support for nnz>1
-                if nnz == 1:
-
-                    for hemishpere_index, hemi_ in zip(
-                        [0, 1], ["lh", "rh"]
-                    ):  # 0->lh, 1->rh
-                        hemisphere, hemisphere_hat = (
-                            stc.vertices[hemishpere_index],
-                            stc_hat.vertices[hemishpere_index],
-                        )
-                        if (
-                            hemisphere.any() and hemisphere_hat.any()
-                        ):  # if that hemisphere has a source
-                            vertice_index = hemisphere[0]
-                            # find peak amplitude vertex in estimated
-                            peak_vertex, peak_time = stc_hat.get_peak(
-                                hemi=hemi_, vert_as_index=True, time_as_index=True
-                            )
-                            vertice_index_hat = (
-                                stc_hat.lh_vertno[peak_vertex]
-                                if hemi_ == "lh"
-                                else stc_hat.rh_vertno[peak_vertex]
-                            )
-
-                            coordinates = fwd["src"][hemishpere_index]["rr"][
-                                vertice_index
-                            ]
-                            coordinates_hat = fwd["src"][hemishpere_index]["rr"][
-                                vertice_index_hat
-                            ]
-                            euclidean_distance = np.linalg.norm(
-                                coordinates - coordinates_hat
-                            )
-
-                            np.testing.assert_array_less(euclidean_distance, 0.1)
-                            # TODO: decide threshold for euclidean distance
-
-            else:
-                from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
-                from mne import read_forward_solution, convert_forward_solution
-
+        elif orientation_type == "free":
+            if n_times > 1:
                 fwd_fname = get_fwd_fname(subject)
                 fwd = read_forward_solution(fwd_fname)
-                fwd = convert_forward_solution(fwd, force_fixed=True)
+                fwd = convert_forward_solution(fwd)
 
-                active_set = x != 0
-                active_set_hat = x_hat != 0
+                active_set = np.linalg.norm(x, axis=2) != 0
+
+                temp = np.linalg.norm(x_hat, axis=2)
+                temp = np.linalg.norm(temp, axis=1)
+                temp_ = np.partition(-temp, nnz)
+                max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
+                max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
+                active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
+                active_set_hat = np.repeat(active_set_hat, 3).reshape(
+                    active_set_hat.shape[0], -1
+                )
 
                 stc = _make_sparse_stc(
                     x[active_set], active_set, fwd, tmin=1, tstep=1
@@ -170,29 +149,19 @@ def test_estimator(
                     x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
                 )  # estimate
 
-                for hemishpere_index, hemi_ in zip(
-                    [0, 1], ["lh", "rh"]
-                ):  # 0->lh, 1->rh
-                    hemisphere, hemisphere_hat = (
-                        stc.vertices[hemishpere_index],
-                        stc_hat.vertices[hemishpere_index],
-                    )
-                    if (
-                        hemisphere.any() and hemisphere_hat.any()
-                    ):  # if that hemisphere has a source
-                        vertice_index = hemisphere[0]
-                        vertice_index_hat = hemisphere_hat[0]
+        # euclidean distance check
+        lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+        lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+        rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+        rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+        coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
+        coordinates_hat = np.concatenate(
+            [lh_coordinates_hat, rh_coordinates_hat], axis=0
+        )
+        euclidean_distance = np.linalg.norm(coordinates - coordinates_hat, axis=1)
 
-                        coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
-                        coordinates_hat = fwd["src"][hemishpere_index]["rr"][
-                            vertice_index_hat
-                        ]
-                        euclidean_distance = np.linalg.norm(
-                            coordinates - coordinates_hat
-                        )
-
-                        np.testing.assert_array_less(euclidean_distance, 0.1)
-                        # TODO: decide threshold for euclidean distance
+        np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+        # TODO: decide threshold for euclidean distance
 
         if save_estimates:
 
