@@ -111,36 +111,39 @@ def test_estimator(
                 temp = np.linalg.norm(x_hat, axis=1)
                 if len(np.unique(temp)) == 1:
                     print("No vertices estimated!")
+                else:  # perform euclidean distance check only if vertices are estimated
 
-                temp_ = np.partition(-temp, nnz)
-                max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
+                    temp_ = np.partition(-temp, nnz)
+                    max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
 
-                # remove 0 from list incase less vertices than nnz were estimated
-                max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
-                active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
+                    # remove 0 from list incase less vertices than nnz were estimated
+                    max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
+                    active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
 
-                stc = _make_sparse_stc(
-                    x[active_set], active_set, fwd, tmin=1, tstep=1
-                )  # ground truth
-                stc_hat = _make_sparse_stc(
-                    x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
-                )  # estimate
+                    stc = _make_sparse_stc(
+                        x[active_set], active_set, fwd, tmin=1, tstep=1
+                    )  # ground truth
+                    stc_hat = _make_sparse_stc(
+                        x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+                    )  # estimate
 
-                # euclidean distance check
-                lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
-                lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
-                rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
-                rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
-                coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
-                coordinates_hat = np.concatenate(
-                    [lh_coordinates_hat, rh_coordinates_hat], axis=0
-                )
-                euclidean_distance = np.linalg.norm(
-                    coordinates - coordinates_hat, axis=1
-                )
+                    # euclidean distance check
+                    lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+                    lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+                    rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+                    rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+                    coordinates = np.concatenate(
+                        [lh_coordinates, rh_coordinates], axis=0
+                    )
+                    coordinates_hat = np.concatenate(
+                        [lh_coordinates_hat, rh_coordinates_hat], axis=0
+                    )
+                    euclidean_distance = np.linalg.norm(
+                        coordinates - coordinates_hat, axis=1
+                    )
 
-                np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
-                # TODO: decide threshold for euclidean distance
+                    np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+                    # TODO: decide threshold for euclidean distance
 
         else:  # orientation_type == "free":
             if n_times > 1:
