@@ -10,7 +10,7 @@ def get_leadfield_path(subject, type=""):
             elif type == "fixed":
                 return "bsi_zoo/tests/data/lead_field_%s.npz" % subject
     else:
-        return 1
+        return None
 
 
 def get_fwd_fname(subject):
