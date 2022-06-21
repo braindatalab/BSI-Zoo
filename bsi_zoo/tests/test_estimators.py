@@ -139,7 +139,8 @@ def test_estimator(
                         [lh_coordinates_hat, rh_coordinates_hat], axis=0
                     )
                     euclidean_distance = np.linalg.norm(
-                        coordinates - coordinates_hat, axis=1
+                        coordinates[: coordinates_hat.shape[0], :] - coordinates_hat,
+                        axis=1,  # incase less vertices are estimated
                     )
 
                     np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
@@ -178,7 +179,7 @@ def test_estimator(
                     [lh_coordinates_hat, rh_coordinates_hat], axis=0
                 )
                 euclidean_distance = np.linalg.norm(
-                    coordinates - coordinates_hat, axis=1
+                    coordinates[: coordinates_hat.shape[0], :] - coordinates_hat, axis=1
                 )
 
                 np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)

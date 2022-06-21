@@ -71,6 +71,8 @@ def euclidean_distance(x, x_hat, *args, **kwargs):
     rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
     coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
     coordinates_hat = np.concatenate([lh_coordinates_hat, rh_coordinates_hat], axis=0)
-    euclidean_distance = np.linalg.norm(coordinates - coordinates_hat, axis=1)
+    euclidean_distance = np.linalg.norm(
+        coordinates[: coordinates_hat.shape[0], :] - coordinates_hat, axis=1
+    )
 
     return np.mean(euclidean_distance)
