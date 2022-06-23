@@ -1,13 +1,17 @@
-from sklearn.metrics import jaccard_score
+from sklearn.metrics import jaccard_score, mean_squared_error
 from bsi_zoo.config import get_fwd_fname
 import numpy as np
 from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
 from mne import read_forward_solution, convert_forward_solution
 
 
-def jaccard_error(x, x_hat, **kwargs):
+def jaccard_error(x, x_hat, *args, **kwargs):
     # You can read more on the Jaccard score in Scikit-learn definition https://scikit-learn.org/stable/modules/generated/sklearn.metrics.jaccard_score.html
     return 1 - jaccard_score(x, x_hat, average="samples")
+
+
+def mse(x, x_hat, *args, **kwargs):
+    return mean_squared_error(x, x_hat)
 
 
 def euclidean_distance(x, x_hat, *args, **kwargs):
