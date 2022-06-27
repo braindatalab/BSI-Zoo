@@ -1,6 +1,6 @@
 from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import gamma_map
-from bsi_zoo.metrics import euclidean_distance
+from bsi_zoo.metrics import euclidean_distance, mse
 from bsi_zoo.config import get_leadfield_path
 import json
 from scipy import linalg
@@ -91,12 +91,12 @@ if __name__ == "__main__":
         "alpha": 0.99,
     }
 
-    data_agrs_to_benchmark = {"alpha": [0.99, 0.9, 0.8]}
-    metrics = [euclidean_distance]  # list of metric functions here
+    data_agrs_to_benchmark = {"alpha": [0.99, 0.9, 0.8, 0.5], "nnz": [3, 5, 10]}
+    metrics = [euclidean_distance, mse]  # list of metric functions here
 
     benchmark_gamma_map = Benchmark(
         gamma_map, subject, metrics, data_agrs, data_agrs_to_benchmark
     )
 
-    gamma_map_profile = benchmark_gamma_map.benchmark(nruns=1)
+    gamma_map_profile = benchmark_gamma_map.benchmark(nruns=3)
     print(gamma_map_profile)
