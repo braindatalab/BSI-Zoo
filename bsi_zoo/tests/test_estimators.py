@@ -118,7 +118,7 @@ def _generate_data(
     return y, L, x, cov_scaled, noise_scaled
 
 
-@pytest.mark.parametrize("n_times", [1, 10])
+@pytest.mark.parametrize("n_times", [3, 10])
 @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
 @pytest.mark.parametrize("nnz", [1, 2, 3])
 @pytest.mark.parametrize(
