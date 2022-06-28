@@ -143,7 +143,7 @@ def test_estimator(
                         axis=1,  # incase less vertices are estimated
                     )
 
-                    np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+                    np.testing.assert_array_less(np.mean(euclidean_distance), 0.15)
                     # TODO: decide threshold for euclidean distance
 
         else:  # orientation_type == "free":
@@ -182,7 +182,7 @@ def test_estimator(
                     coordinates[: coordinates_hat.shape[0], :] - coordinates_hat, axis=1
                 )
 
-                np.testing.assert_array_less(np.mean(euclidean_distance), 0.1)
+                np.testing.assert_array_less(np.mean(euclidean_distance), 0.15)
                 # TODO: decide threshold for euclidean distance
 
         if save_estimates:
