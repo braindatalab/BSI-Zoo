@@ -11,9 +11,10 @@ def get_data(
     path_to_leadfield,
     orientation_type="fixed",
     alpha=0.99,  # 40dB snr
+    seed=None,
 ):
     if orientation_type == "fixed":
-        rng = np.random.RandomState(42)
+        rng = np.random.RandomState(seed)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)
             L = lead_field["lead_field"]
@@ -57,7 +58,7 @@ def get_data(
 
     elif orientation_type == "free":
 
-        rng = np.random.RandomState(35)
+        rng = np.random.RandomState(seed)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)
             L = lead_field["lead_field"]
