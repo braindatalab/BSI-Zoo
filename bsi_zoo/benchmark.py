@@ -2,7 +2,6 @@ from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import gamma_map
 from bsi_zoo.metrics import euclidean_distance, mse
 from bsi_zoo.config import get_leadfield_path
-import json
 from scipy import linalg
 import random
 import pandas as pd
