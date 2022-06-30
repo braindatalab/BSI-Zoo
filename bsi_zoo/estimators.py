@@ -667,3 +667,73 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     x[active_set, :] = x_bar
 
     return x
+
+
+def lemur(L, y, max_iter=1000, max_iter_em=10):
+    """Latent EM Unsupervised Regression based on https://ieeexplore.ieee.org/document/9746697
+
+    Parameters
+    ----------
+    L : array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y : array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+
+    Returns
+    -------
+    x : array, shape (n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost
+        function formula).
+
+    References
+    ----------
+    XXX
+    """
+    n_sensors, n_sources = L.shape
+    _, n_times = y.shape
+
+    def moments(Y):
+        """Moments identification method for Gaussian mixture."""
+
+        m2, m4, m6 = np.mean(Y ** 2), np.mean(Y ** 4) / 3, np.mean(Y ** 6) / 15
+
+        A, B = m4 - m2 ** 2, m6 / m2 - m2 ** 2
+        C = (B / A - 3) * m2
+
+        D = (C ** 2) / 4 + A
+        D = max(0, D)
+        X = -C / 2 + np.sqrt(D)
+
+        return (X ** 2 / (A + X ** 2),A / X + X, abs(m2 - X))
+
+    def em_step(z, theta):
+        """EM step for denoising mixture of Gaussians."""
+
+        mu = theta[1]/(theta[1]+theta[2])
+        nu = mu*theta[2]
+        # Posterior probability for each source at each time to be independently active :
+        phi = 1 / (1 + (1 - theta[0])/theta[0]* np.sqrt(1 + theta[1] / theta[2])* np.exp(-(z ** 2)/2*mu/theta[2] ))
+
+        #TODO : Add the time smoothness of phi
+        
+        p_est = np.mean(phi)
+        sigma_x_est = np.mean(y**2) + mu**2*np.mean(phi*y**2)
+        sigma_b_est = np.mean(y**2) + p_est*sigma_x_est - 2*mu*np.mean(phi*y**2)
+
+        X_eap = z * phi * mu #Expectation of X A Posteriori
+        return ([p_est,sigma_x_est,sigma_b_est], X_eap,phi)
+    
+    x = L.T@y # initialisation of X
+    theta_p = [0,0,0] # initialisation of theta        
+    norm = np.linalg.norm(L@L.T,2)
+
+    for k_inner in range(max_iter):
+        z = x + L.T@(y - L@x)/norm# Gradient descent
+        theta = moments(z)# Initialisation of the EM (feel free to find better ones !)
+        for k_em in range(max_iter_em):
+            theta, u, phi = em_step(z, theta)# EM updates
+    return x

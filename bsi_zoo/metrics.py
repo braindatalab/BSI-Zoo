@@ -80,3 +80,20 @@ def euclidean_distance(x, x_hat, *args, **kwargs):
     )
 
     return np.mean(euclidean_distance)
+
+
+def nll(x, x_hat, *args, **kwargs):
+    y = kwargs["y"]
+    L = kwargs["L"]
+    cov = kwargs["cov"]
+    active_set = kwargs["active_set"]
+    nnz = kwargs["nnz"]
+
+    # Marginal NegLogLikelihood score upon estimation of the support:
+    # ||(cov + L Q L.T)^-1/2 y||^2_F  + log|cov + L Q L.T| with Q the support matrix
+    q = np.zeros(x.shape[0])
+    q[active_set] = 1
+    Q = np.diag(q)
+    cov_y = cov + L@Q@L.T
+    # To take into account the knowledge on nnz you need to add +2log((n_sources-nnz)/nnz)||q||_0
+    return np.linalg.norm(np.linalg.sqrt(np.linalg.inv(cov_y)),ord='fro')**2 + np.log(np.linalg.det(cov_y))
