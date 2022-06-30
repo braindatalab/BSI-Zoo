@@ -34,3 +34,5 @@ tags
 *.zip
 figures
 *.png
+
+bsi_zoo/data/*

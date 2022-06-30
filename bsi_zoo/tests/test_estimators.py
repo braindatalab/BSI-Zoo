@@ -2,6 +2,9 @@ import numpy as np
 from scipy import linalg
 import pytest
 
+from bsi_zoo.config import get_leadfield_path, get_fwd_fname
+from bsi_zoo.data_generator import get_data
+
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
@@ -10,112 +13,6 @@ from bsi_zoo.estimators import (
     iterative_L2_typeII,
     gamma_map,
 )
-
-
-def _generate_data(
-    n_sensors,
-    n_times,
-    n_sources,
-    n_orient,
-    nnz,
-    cov_type,
-    path_to_leadfield,
-    orientation_type="fixed",
-):
-    if orientation_type == "fixed":
-        rng = np.random.RandomState(42)
-        if path_to_leadfield is not None:
-            lead_field = np.load(path_to_leadfield, allow_pickle=True)
-            L = lead_field["lead_field"]
-            n_sensors, n_sources = L.shape
-        else:
-            L = rng.randn(n_sensors, n_sources)
-
-        x = np.zeros((n_sources, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
-        # x[:nnz] = rng.randn(nnz, n_times)
-        y = L @ x
-
-        noise_type = "random"
-        if cov_type == "diag":
-            if noise_type == "random":
-                # initialization of the noise covariance matrix with a random diagonal matrix
-                cov = rng.randn(n_sensors, n_sensors)
-                cov = 1e-3 * (cov @ cov.T)
-                cov = np.diag(np.diag(cov))
-            else:
-                # initialization of the noise covariance with an identity matrix
-                cov = 1e-2 * np.diag(np.ones(n_sensors))
-        else:
-            # initialization of the noise covariance matrix with a full PSD random matrix
-            cov = rng.randn(n_sensors, n_sensors)
-            cov = 1e-3 * (cov @ cov.T)
-            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
-
-        signal_norm = np.linalg.norm(y, "fro")
-        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-        noise_norm = np.linalg.norm(noise, "fro")
-        noise_normalised = noise / noise_norm
-
-        alpha = 0.99  # 40dB snr
-        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
-        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
-        y += noise_scaled
-
-        if n_times == 1:
-            y = y[:, 0]
-            x = x[:, 0]
-
-    elif orientation_type == "free":
-
-        rng = np.random.RandomState(35)
-        if path_to_leadfield is not None:
-            lead_field = np.load(path_to_leadfield, allow_pickle=True)
-            L = lead_field["lead_field"]
-            n_sensors, n_sources, _ = L.shape
-        else:
-            L = rng.randn(n_sensors, n_sources, n_orient)
-
-        x = np.zeros((n_sources, n_orient, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(
-            nnz, n_orient, n_times
-        )
-        y = np.einsum("nmr, mrd->nd", L, x)
-
-        noise_type = "random"
-        if cov_type == "diag":
-            if noise_type == "random":
-                # initialization of the noise covariance matrix with a random diagonal matrix
-                cov = rng.randn(n_sensors, n_sensors)
-                cov = 1e-3 * (cov @ cov.T)
-                cov = np.diag(np.diag(cov))
-            else:
-                # initialization of the noise covariance with an identity matrix
-                cov = 1e-2 * np.diag(np.ones(n_sensors))
-        else:
-            # initialization of the noise covariance matrix with a full PSD random matrix
-            cov = rng.randn(n_sensors, n_sensors)
-            cov = 1e-3 * (cov @ cov.T)
-            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
-
-        signal_norm = np.linalg.norm(y, "fro")
-        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-        noise_norm = np.linalg.norm(noise, "fro")
-        noise_normalised = noise / noise_norm
-
-        alpha = 0.99  # 40dB snr
-        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
-        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
-        y += noise_scaled
-
-        # if n_times == 1:
-        #     y = y[:, 0]
-        #     x = x[:, 0]
-
-        # reshaping L to (n_sensors, n_sources*n_orient)
-        L = L.reshape(L.shape[0], -1)
-
-    return y, L, x, cov_scaled, noise_scaled
 
 
 @pytest.mark.parametrize("n_times", [3, 10])
@@ -151,16 +48,11 @@ def test_estimator(
     if solver != gamma_map and orientation_type == "free":
         pytest.skip("Free orientation support only for Gamma Map solver currently.")
 
-    # setting leadfield paths
-    if subject is None:
-        path_to_leadfield = None
-    else:
-        if orientation_type == "free":
-            path_to_leadfield = "bsi_zoo/tests/data/lead_field_free_%s.npz" % subject
-        elif orientation_type == "fixed":
-            path_to_leadfield = "bsi_zoo/tests/data/lead_field_%s.npz" % subject
+    path_to_leadfield = get_leadfield_path(
+        subject, orientation_type
+    )  # setting leadfield paths
 
-    y, L, x, cov, noise = _generate_data(
+    y, L, x, cov, noise = get_data(
         n_sensors=50,
         n_times=n_times,
         n_sources=200,
@@ -202,17 +94,73 @@ def test_estimator(
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
     else:
-        if orientation_type == "fixed":  # TODO: support for free orientation
-            if n_times > 1:
-                from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
-                from mne import read_forward_solution, convert_forward_solution
+        from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
+        from mne import read_forward_solution, convert_forward_solution
 
-                fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
-                fwd = read_forward_solution(fwd_fname)
+        fwd_fname = get_fwd_fname(subject)
+        fwd = read_forward_solution(fwd_fname)
+        global stc, stc_hat
+
+        if orientation_type == "fixed":
+            if n_times > 1:
                 fwd = convert_forward_solution(fwd, force_fixed=True)
 
                 active_set = np.linalg.norm(x, axis=1) != 0
-                active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
+
+                # check if no vertices are estimated
+                temp = np.linalg.norm(x_hat, axis=1)
+                if len(np.unique(temp)) == 1:
+                    print("No vertices estimated!")
+                else:  # perform euclidean distance check only if vertices are estimated
+
+                    temp_ = np.partition(-temp, nnz)
+                    max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
+
+                    # remove 0 from list incase less vertices than nnz were estimated
+                    max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
+                    active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
+
+                    stc = _make_sparse_stc(
+                        x[active_set], active_set, fwd, tmin=1, tstep=1
+                    )  # ground truth
+                    stc_hat = _make_sparse_stc(
+                        x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
+                    )  # estimate
+
+                    # euclidean distance check
+                    lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+                    lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+                    rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+                    rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+                    coordinates = np.concatenate(
+                        [lh_coordinates, rh_coordinates], axis=0
+                    )
+                    coordinates_hat = np.concatenate(
+                        [lh_coordinates_hat, rh_coordinates_hat], axis=0
+                    )
+                    euclidean_distance = np.linalg.norm(
+                        coordinates[: coordinates_hat.shape[0], :] - coordinates_hat,
+                        axis=1,  # incase less vertices are estimated
+                    )
+
+                    np.testing.assert_array_less(np.mean(euclidean_distance), 0.2)
+                    # TODO: decide threshold for euclidean distance
+
+        else:  # orientation_type == "free":
+            if n_times > 1:
+                fwd = convert_forward_solution(fwd)
+
+                active_set = np.linalg.norm(x, axis=2) != 0
+
+                temp = np.linalg.norm(x_hat, axis=2)
+                temp = np.linalg.norm(temp, axis=1)
+                temp_ = np.partition(-temp, nnz)
+                max_temp = -temp_[:nnz]  # get n(=nnz) max amplitudes
+                max_temp = np.delete(max_temp, np.where(max_temp == 0.0))
+                active_set_hat = np.array(list(map(max_temp.__contains__, temp)))
+                active_set_hat = np.repeat(active_set_hat, 3).reshape(
+                    active_set_hat.shape[0], -1
+                )
 
                 stc = _make_sparse_stc(
                     x[active_set], active_set, fwd, tmin=1, tstep=1
@@ -222,85 +170,20 @@ def test_estimator(
                 )  # estimate
 
                 # euclidean distance check
-                # supports only nnz=1 case
-                # TODO: support for nnz>1
-                if nnz == 1:
+                lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
+                lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
+                rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
+                rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
+                coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
+                coordinates_hat = np.concatenate(
+                    [lh_coordinates_hat, rh_coordinates_hat], axis=0
+                )
+                euclidean_distance = np.linalg.norm(
+                    coordinates[: coordinates_hat.shape[0], :] - coordinates_hat, axis=1
+                )
 
-                    for hemishpere_index, hemi_ in zip(
-                        [0, 1], ["lh", "rh"]
-                    ):  # 0->lh, 1->rh
-                        hemisphere, hemisphere_hat = (
-                            stc.vertices[hemishpere_index],
-                            stc_hat.vertices[hemishpere_index],
-                        )
-                        if (
-                            hemisphere.any() and hemisphere_hat.any()
-                        ):  # if that hemisphere has a source
-                            vertice_index = hemisphere[0]
-                            # find peak amplitude vertex in estimated
-                            peak_vertex, peak_time = stc_hat.get_peak(
-                                hemi=hemi_, vert_as_index=True, time_as_index=True
-                            )
-                            vertice_index_hat = (
-                                stc_hat.lh_vertno[peak_vertex]
-                                if hemi_ == "lh"
-                                else stc_hat.rh_vertno[peak_vertex]
-                            )
-
-                            coordinates = fwd["src"][hemishpere_index]["rr"][
-                                vertice_index
-                            ]
-                            coordinates_hat = fwd["src"][hemishpere_index]["rr"][
-                                vertice_index_hat
-                            ]
-                            euclidean_distance = np.linalg.norm(
-                                coordinates - coordinates_hat
-                            )
-
-                            np.testing.assert_array_less(euclidean_distance, 0.1)
-                            # TODO: decide threshold for euclidean distance
-
-            else:
-                from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
-                from mne import read_forward_solution, convert_forward_solution
-
-                fwd_fname = "bsi_zoo/tests/data/%s-fwd.fif" % subject
-                fwd = read_forward_solution(fwd_fname)
-                fwd = convert_forward_solution(fwd, force_fixed=True)
-
-                active_set = x != 0
-                active_set_hat = x_hat != 0
-
-                stc = _make_sparse_stc(
-                    x[active_set], active_set, fwd, tmin=1, tstep=1
-                )  # ground truth
-                stc_hat = _make_sparse_stc(
-                    x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
-                )  # estimate
-
-                for hemishpere_index, hemi_ in zip(
-                    [0, 1], ["lh", "rh"]
-                ):  # 0->lh, 1->rh
-                    hemisphere, hemisphere_hat = (
-                        stc.vertices[hemishpere_index],
-                        stc_hat.vertices[hemishpere_index],
-                    )
-                    if (
-                        hemisphere.any() and hemisphere_hat.any()
-                    ):  # if that hemisphere has a source
-                        vertice_index = hemisphere[0]
-                        vertice_index_hat = hemisphere_hat[0]
-
-                        coordinates = fwd["src"][hemishpere_index]["rr"][vertice_index]
-                        coordinates_hat = fwd["src"][hemishpere_index]["rr"][
-                            vertice_index_hat
-                        ]
-                        euclidean_distance = np.linalg.norm(
-                            coordinates - coordinates_hat
-                        )
-
-                        np.testing.assert_array_less(euclidean_distance, 0.1)
-                        # TODO: decide threshold for euclidean distance
+                np.testing.assert_array_less(np.mean(euclidean_distance), 0.2)
+                # TODO: decide threshold for euclidean distance
 
         if save_estimates:
 
