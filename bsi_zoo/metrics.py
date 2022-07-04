@@ -69,40 +69,52 @@ def mse(x, x_hat, *args, **kwargs):
     return mean_squared_error(x, x_hat)
 
 
-def EMD(x, x_hat, *args, **kwargs):
+def emd(x, x_hat, *args, **kwargs):
     orientation_type = kwargs["orientation_type"]
     subject = kwargs["subject"]
-    nnz = kwargs["nnz"]
+    # nnz = kwargs["nnz"]
 
     if orientation_type == "fixed":
         temp = np.linalg.norm(x, axis=1)
-        a = temp[np.nonzero(temp)]
+        a_mask = temp != 0
+        a = temp[a_mask]
 
         temp = np.linalg.norm(x_hat, axis=1)
-        temp_ = np.partition(-temp, nnz)
-        b = -temp_[:nnz]  # get n(=nnz) max amplitudes
+        b_mask = temp != 0
+        b = temp[b_mask]
+        # temp_ = np.partition(-temp, nnz)
+        # b = -temp_[:nnz]  # get n(=nnz) max amplitudes
+        # b = -temp_[:nnz]  # get n(=nnz) max amplitudes
     elif orientation_type == "free":
         temp = np.linalg.norm(x, axis=2)
         temp = np.linalg.norm(temp, axis=1)
-        a = temp[np.nonzero(temp)]
+        a_mask = temp != 0
+        a = temp[a_mask]
 
         temp = np.linalg.norm(x_hat, axis=2)
         temp = np.linalg.norm(temp, axis=1)
-        temp_ = np.partition(-temp, nnz)
-        b = -temp_[:nnz]  # get n(=nnz) max amplitudes
+        b_mask = temp != 0
+        b = temp[b_mask]
+        # temp_ = np.partition(-temp, nnz)
+        # b = -temp_[:nnz]  # get n(=nnz) max amplitudes
 
-    stc, stc_hat, fwd = _get_active_stc(x, x_hat, orientation_type, subject, nnz)
-    lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
-    lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
-    rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
-    rh_coordinates_hat = fwd["src"][1]["rr"][stc_hat.rh_vertno]
-    coordinates = np.concatenate([lh_coordinates, rh_coordinates], axis=0)
-    coordinates_hat = np.concatenate([lh_coordinates_hat, rh_coordinates_hat], axis=0)
-    M = cdist(coordinates, coordinates_hat, metric="euclidean")
+    fwd_fname = get_fwd_fname(subject)
+    fwd = read_forward_solution(fwd_fname)
+    fwd = convert_forward_solution(fwd, force_fixed=True)
+    src = fwd["src"]
 
-    emd = emd2(a, b, M)
+    stc_a = _make_sparse_stc(a[:, None], a_mask, fwd, tmin=1, tstep=1)
+    stc_b = _make_sparse_stc(b[:, None], b_mask, fwd, tmin=1, tstep=1)
 
-    return emd
+    rr_a = np.r_[src[0]["rr"][stc_a.lh_vertno], src[1]["rr"][stc_a.rh_vertno]]
+    rr_b = np.r_[src[0]["rr"][stc_b.lh_vertno], src[1]["rr"][stc_b.rh_vertno]]
+    M = cdist(rr_a, rr_b, metric="euclidean")
+
+    # Normalize a and b as EMD is defined between probability distributions
+    a /= a.sum()
+    b /= b.sum()
+
+    return emd2(a, b, M)
 
 
 def euclidean_distance(x, x_hat, *args, **kwargs):
