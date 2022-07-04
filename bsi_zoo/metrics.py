@@ -69,10 +69,7 @@ def mse(x, x_hat, *args, **kwargs):
     return mean_squared_error(x, x_hat)
 
 
-def EMD(x, x_hat, *args, **kwargs):
-    orientation_type = kwargs["orientation_type"]
-    subject = kwargs["subject"]
-    nnz = kwargs["nnz"]
+def emd(x, x_hat, orientation_type, subject, nnz, *args, **kwargs):
 
     if orientation_type == "fixed":
         temp = np.linalg.norm(x, axis=1)
@@ -100,15 +97,12 @@ def EMD(x, x_hat, *args, **kwargs):
     coordinates_hat = np.concatenate([lh_coordinates_hat, rh_coordinates_hat], axis=0)
     M = cdist(coordinates, coordinates_hat, metric="euclidean")
 
-    emd = emd2(a, b, M)
+    emd_score = emd2(a, b, M)
 
-    return emd
+    return emd_score
 
 
-def euclidean_distance(x, x_hat, *args, **kwargs):
-    orientation_type = kwargs["orientation_type"]
-    subject = kwargs["subject"]
-    nnz = kwargs["nnz"]
+def euclidean_distance(x, x_hat, orientation_type, subject, nnz, *args, **kwargs):
 
     stc, stc_hat, _, _, fwd = _get_active(x, x_hat, orientation_type, subject, nnz)
 
