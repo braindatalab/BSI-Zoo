@@ -15,9 +15,16 @@ from bsi_zoo.metrics import euclidean_distance, mse, emd
 from bsi_zoo.config import get_leadfield_path
 
 
-def _run_estimator(subject, estimator, metrics, this_data_args,
-                   this_estimator_args, seed, estimator_name,
-                   memory):
+def _run_estimator(
+    subject,
+    estimator,
+    metrics,
+    this_data_args,
+    this_estimator_args,
+    seed,
+    estimator_name,
+    memory,
+):
     print("Benchmarking this data...")
     print(this_data_args)
 
@@ -43,9 +50,7 @@ def _run_estimator(subject, estimator, metrics, this_data_args,
         )
         this_results[metric.__name__] = metric_score
     this_results.update(this_data_args)
-    this_results.update({
-        f"estimator__{k}": v for k, v in this_estimator_args.items()
-    })
+    this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
     return this_results
 
 
@@ -59,7 +64,7 @@ class Benchmark:
         estimator_args={},
         random_state=None,
         memory=None,
-        n_jobs=1
+        n_jobs=1,
     ) -> None:
         self.estimator = estimator
         self.subject = subject
@@ -78,12 +83,18 @@ class Benchmark:
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(_run_estimator)(
-                    self.subject, estimator, self.metrics, this_data_args,
-                    this_estimator_args, seed,
-                    estimator_name=self.estimator.__name__, memory=self.memory
-                ) for this_data_args, seed, this_estimator_args in itertools.product(
-                    ParameterGrid(self.data_args), seeds, ParameterGrid(self.estimator_args)
-                )
+                self.subject,
+                estimator,
+                self.metrics,
+                this_data_args,
+                this_estimator_args,
+                seed,
+                estimator_name=self.estimator.__name__,
+                memory=self.memory,
+            )
+            for this_data_args, seed, this_estimator_args in itertools.product(
+                ParameterGrid(self.data_args), seeds, ParameterGrid(self.estimator_args)
+            )
         )
 
         results = pd.DataFrame(results)
@@ -113,13 +124,19 @@ if __name__ == "__main__":
         (gamma_map, {"alpha": [0.9, 0.5]}),
     ]
 
-    memory = Memory('.')
+    memory = Memory(".")
 
     df_results = []
     for estimator, estimator_args in estimators:
         benchmark = Benchmark(
-            estimator, subject, metrics, data_args, estimator_args,
-            random_state=42, memory=memory, n_jobs=n_jobs
+            estimator,
+            subject,
+            metrics,
+            data_args,
+            estimator_args,
+            random_state=42,
+            memory=memory,
+            n_jobs=n_jobs,
         )
         results = benchmark.run(nruns=2)
         df_results.append(results)
@@ -129,18 +146,7 @@ if __name__ == "__main__":
     data_path = Path("bsi_zoo/data")
     data_path.mkdir(exist_ok=True)
     df_results.to_pickle(
-        data_path / f"benchmark_data_{subject}_{data_args['orientation_type']}.pkl"
+        data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
     )
 
     print(df_results)
-
-    for alpha in df_results['alpha'].unique():
-        for metric in [m.__name__ for m in metrics]:
-            this_df_results = df_results[df_results['alpha'] == alpha]
-            fig = plt.figure()
-            sns.barplot(
-                data=this_df_results, x="estimator", y=metric, hue="estimator__alpha"
-            )
-            plt.title(f"{metric} for alpha={alpha}")
-            plt.tight_layout()
-            plt.show()
