@@ -107,4 +107,4 @@ if __name__ == "__main__":
 
     df_results.to_pickle("bsi_zoo/data/benchmark_data_%s_%s.pkl" % (subject, data_args["orientation_type"]))
 
-    print(results)
+    print(df_results)
