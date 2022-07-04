@@ -7,7 +7,7 @@ from scipy.spatial.distance import cdist
 from ot import emd2
 
 
-def _get_active(x, x_hat, orientation_type, subject, nnz):
+def _get_active_nnz(x, x_hat, orientation_type, subject, nnz):
     fwd_fname = get_fwd_fname(subject)
     fwd = read_forward_solution(fwd_fname)
 
@@ -69,10 +69,7 @@ def mse(x, x_hat, *args, **kwargs):
     return mean_squared_error(x, x_hat)
 
 
-def emd(x, x_hat, *args, **kwargs):
-    orientation_type = kwargs["orientation_type"]
-    subject = kwargs["subject"]
-    # nnz = kwargs["nnz"]
+def emd(x, x_hat, orientation_type, subject, *args, **kwargs):
 
     if orientation_type == "fixed":
         temp = np.linalg.norm(x, axis=1)
@@ -119,7 +116,7 @@ def emd(x, x_hat, *args, **kwargs):
 
 def euclidean_distance(x, x_hat, orientation_type, subject, nnz, *args, **kwargs):
 
-    stc, stc_hat, _, _, fwd = _get_active(x, x_hat, orientation_type, subject, nnz)
+    stc, stc_hat, _, _, fwd = _get_active_nnz(x, x_hat, orientation_type, subject, nnz)
 
     # euclidean distance check
     lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]

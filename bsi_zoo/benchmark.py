@@ -19,7 +19,6 @@ class Benchmark:
         data_args={},
         data_args_to_benchmark={},
         random_state=None,
-        save_profile=True,
     ) -> None:
         self.estimator = estimator
         self.subject = subject
@@ -27,7 +26,6 @@ class Benchmark:
         self.data_args = data_args
         self.data_args_to_benchmark = data_args_to_benchmark
         self.random_state = random_state
-        self.save_profile = save_profile
 
     def run(self, nruns=2):
         # profile = {}
@@ -43,7 +41,6 @@ class Benchmark:
             print("Benchmarking this data...")
             print(data_args)
 
-            store_metrics = {m.__name__: [] for m in self.metrics}
             for seed in seeds:
                 # get data
                 y, L, x, cov, _ = get_data(**data_args, seed=seed)
@@ -57,9 +54,7 @@ class Benchmark:
                 else:
                     x_hat = self.estimator(L, y, cov, **solver_args)
 
-                this_results = dict(
-                    estimator=self.estimator.__name__,
-                )
+                this_results = dict(estimator=self.estimator.__name__)
                 for metric in self.metrics:
                     metric_score = metric(
                         x,
@@ -76,65 +71,51 @@ class Benchmark:
 
         results = pd.DataFrame(results)
         return results
-        #     profile[str(solver_args)] = store_metrics
-
-        # if self.save_profile:
-
-        #     indexes = []
-        #     for m in metrics:
-        #         indexes += [m.__name__] * nruns
-        #     df = pd.DataFrame(profile, index=indexes)
-
-        #     df.to_pickle(
-        #         "bsi_zoo/data/benchmark_data_%s_%s_%s_orient_nnz_%d.pkl"
-        #         % (
-        #             self.subject,
-        #             self.estimator.__name__,
-        #             self.data_args["orientation_type"],
-        #             self.data_args["nnz"],
-        #         )
-        #     )
-
-        #     print(
-        #         "Profile saved for subject %s for %s estimator!"
-        #         % (self.subject, self.estimator.__name__)
-        #     )
-
-        # return profile
 
 
 if __name__ == "__main__":
-    # for nnz=2
+
     subject = "CC120264"
-    data_args = {
+    data_args_I = {
         "n_sensors": 50,
         "n_times": 10,
         "n_sources": 200,
         "n_orient": 3,
         "nnz": 2,
         "cov_type": "diag",
-        # "cov_type": "full",
         "path_to_leadfield": get_leadfield_path(subject, type="fixed"),
         "orientation_type": "fixed",
         "alpha": 0.99,
     }
 
+    data_args_II = {
+        "n_sensors": 50,
+        "n_times": 10,
+        "n_sources": 200,
+        "n_orient": 3,
+        "nnz": 2,
+        "cov_type": "full",
+        "path_to_leadfield": get_leadfield_path(subject, type="fixed"),
+        "orientation_type": "fixed",
+        "alpha": 0.99,
+    }
     metrics = [euclidean_distance, mse, emd]  # list of metric functions here
 
-    # estimators = [gamma_map, iterative_sqrt]
     estimators = [
-        (iterative_sqrt, {"alpha": [0.5, 0.2]}),
-        # (gamma_map, {"alpha": [0.99, 0.9, 0.8, 0.5]})
+        (iterative_sqrt, data_args_I, {"alpha": [0.9, 0.5, 0.2]}),
+        (gamma_map, data_args_II, {"alpha": [0.9, 0.5, 0.2]}),
     ]
 
     df_results = []
-    for estimator, data_args_to_benchmark in estimators:
+    for estimator, data_args, data_args_to_benchmark in estimators:
         benchmark = Benchmark(
             estimator, subject, metrics, data_args, data_args_to_benchmark
         )
-        results = benchmark.run(nruns=5)
+        results = benchmark.run(nruns=2)
         df_results.append(results)
 
     df_results = pd.concat(df_results, axis=0)
+
+    df_results.to_pickle("bsi_zoo/data/benchmark_data_%s.pkl" % (subject))
 
     print(results)
