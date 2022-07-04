@@ -76,7 +76,7 @@ class Benchmark:
 if __name__ == "__main__":
 
     subject = "CC120264"
-    data_args_I = {
+    data_args = {
         "n_sensors": 50,
         "n_times": 10,
         "n_sources": 200,
@@ -88,22 +88,11 @@ if __name__ == "__main__":
         "alpha": 0.99,
     }
 
-    data_args_II = {
-        "n_sensors": 50,
-        "n_times": 10,
-        "n_sources": 200,
-        "n_orient": 3,
-        "nnz": 2,
-        "cov_type": "full",
-        "path_to_leadfield": get_leadfield_path(subject, type="fixed"),
-        "orientation_type": "fixed",
-        "alpha": 0.99,
-    }
     metrics = [euclidean_distance, mse, emd]  # list of metric functions here
 
     estimators = [
-        (iterative_sqrt, data_args_I, {"alpha": [0.9, 0.5, 0.2]}),
-        (gamma_map, data_args_II, {"alpha": [0.9, 0.5, 0.2]}),
+        (iterative_sqrt, data_args, {"alpha": [0.9, 0.5, 0.2]}),
+        (gamma_map, data_args, {"alpha": [0.9, 0.5, 0.2]}),
     ]
 
     df_results = []
@@ -116,6 +105,6 @@ if __name__ == "__main__":
 
     df_results = pd.concat(df_results, axis=0)
 
-    df_results.to_pickle("bsi_zoo/data/benchmark_data_%s.pkl" % (subject))
+    df_results.to_pickle("bsi_zoo/data/benchmark_data_%s_%s.pkl" % (subject, data_args["orientation_type"]))
 
     print(results)
