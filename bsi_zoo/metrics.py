@@ -7,7 +7,7 @@ from scipy.spatial.distance import cdist
 from ot import emd2
 
 
-def _get_active_stc(x, x_hat, orientation_type, subject, nnz):
+def _get_active(x, x_hat, orientation_type, subject, nnz):
     fwd_fname = get_fwd_fname(subject)
     fwd = read_forward_solution(fwd_fname)
 
@@ -57,7 +57,7 @@ def _get_active_stc(x, x_hat, orientation_type, subject, nnz):
             x_hat[active_set_hat], active_set_hat, fwd, tmin=1, tstep=1
         )  # estimate
 
-    return stc, stc_hat, fwd
+    return stc, stc_hat, active_set, active_set_hat, fwd
 
 
 def jaccard_error(x, x_hat, *args, **kwargs):
@@ -91,7 +91,7 @@ def EMD(x, x_hat, *args, **kwargs):
         temp_ = np.partition(-temp, nnz)
         b = -temp_[:nnz]  # get n(=nnz) max amplitudes
 
-    stc, stc_hat, fwd = _get_active_stc(x, x_hat, orientation_type, subject, nnz)
+    stc, stc_hat, _, _, fwd = _get_active(x, x_hat, orientation_type, subject, nnz)
     lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
     lh_coordinates_hat = fwd["src"][0]["rr"][stc_hat.lh_vertno]
     rh_coordinates = fwd["src"][1]["rr"][stc.rh_vertno]
@@ -110,7 +110,7 @@ def euclidean_distance(x, x_hat, *args, **kwargs):
     subject = kwargs["subject"]
     nnz = kwargs["nnz"]
 
-    stc, stc_hat, fwd = _get_active_stc(x, x_hat, orientation_type, subject, nnz)
+    stc, stc_hat, _, _, fwd = _get_active(x, x_hat, orientation_type, subject, nnz)
 
     # euclidean distance check
     lh_coordinates = fwd["src"][0]["rr"][stc.lh_vertno]
