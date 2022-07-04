@@ -1,9 +1,7 @@
 import itertools
 from pathlib import Path
 from scipy import linalg
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from joblib import Memory, Parallel, delayed
 from sklearn.utils import check_random_state
 from sklearn.model_selection import ParameterGrid
