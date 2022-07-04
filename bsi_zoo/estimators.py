@@ -710,22 +710,26 @@ def lemur(L, y, max_iter=1000, max_iter_em=10):
 
         return (X ** 2 / (A + X ** 2),A / X + X, abs(m2 - X))
 
-    def em_step(z, theta):
-        """EM step for denoising mixture of Gaussians."""
+    def em_step(obs, param):
+        """EM update with x as complete data."""
 
-        mu = theta[1]/(theta[1]+theta[2])
-        nu = mu*theta[2]
-        # Posterior probability for each source at each time to be independently active :
-        phi = 1 / (1 + (1 - theta[0])/theta[0]* np.sqrt(1 + theta[1] / theta[2])* np.exp(-(z ** 2)/2*mu/theta[2] ))
+        rho = (1-param[0])/param[0]
+        mu = param[1]/(param[1]+param[2])
 
-        #TODO : Add the time smoothness of phi
+        s_x = param[1]**2
+        s_b = param[2]**2
         
-        p_est = np.mean(phi)
-        sigma_x_est = np.mean(y**2) + mu**2*np.mean(phi*y**2)
-        sigma_b_est = np.mean(y**2) + p_est*sigma_x_est - 2*mu*np.mean(phi*y**2)
+        phi_k = 1/(
+            1 + rho*np.sqrt(param[1]/param[2] + 1) * np.exp( -np.sum(obs**2,axis=1)/2 *mu/param[2] )
+            )
 
-        X_eap = z * phi * mu #Expectation of X A Posteriori
-        return ([p_est,sigma_x_est,sigma_b_est], X_eap,phi)
+        p = np.mean(phi_k)
+        s_x = mu*param[2] + mu**2/p * np.mean(phi_k*np.mean(obs**2,axis=1) )
+        s_b = np.mean(obs**2) - 2 * mu * np.mean(phi_k*np.mean(obs**2,axis=1)) + p*s_x**2
+
+        X_eap = (phi_k * obs.T).T * s_x / (s_x + s_b)
+
+        return ([p, s_x, s_b], X_eap,phi_k)
     
     x = L.T@y # initialisation of X
     theta_p = [0,0,0] # initialisation of theta        

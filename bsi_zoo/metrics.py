@@ -86,8 +86,11 @@ def nll(x, x_hat, *args, **kwargs):
     y = kwargs["y"]
     L = kwargs["L"]
     cov = kwargs["cov"]
-    active_set = kwargs["active_set"]
+    orientation_type = kwargs["orientation_type"]
+    subject = kwargs["subject"]
     nnz = kwargs["nnz"]
+    
+    active_set = _get_active_nnz(x, x_hat, orientation_type, subject, nnz)#kwargs["active_set"]
 
     # Marginal NegLogLikelihood score upon estimation of the support:
     # ||(cov + L Q L.T)^-1/2 y||^2_F  + log|cov + L Q L.T| with Q the support matrix
