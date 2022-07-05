@@ -37,6 +37,9 @@ def _run_estimator(
     else:
         x_hat = estimator(L, y, cov, **this_estimator_args)
 
+    if this_data_args["orientation_type"] == "free":
+        x_hat = x_hat.reshape(x.shape)
+
     this_results = dict(estimator=estimator_name)
     for metric in metrics:
         metric_score = metric(
