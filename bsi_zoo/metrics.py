@@ -1,4 +1,4 @@
-from sklearn.metrics import jaccard_score, mean_squared_error
+from sklearn.metrics import jaccard_score, mean_squared_error, f1_score
 from bsi_zoo.config import get_fwd_fname
 import numpy as np
 from mne.inverse_sparse.mxne_inverse import _make_sparse_stc
@@ -130,3 +130,18 @@ def euclidean_distance(x, x_hat, orientation_type, subject, nnz, *args, **kwargs
     )
 
     return np.mean(euclidean_distance)
+
+
+def f1(x, x_hat, orientation_type, *args, **kwargs):
+    if orientation_type == "fixed":
+        active_set = np.linalg.norm(x, axis=1) != 0
+        active_set_hat = np.linalg.norm(x_hat, axis=1) != 0
+
+    elif orientation_type == "free":
+        temp = np.linalg.norm(x, axis=2)
+        active_set = np.linalg.norm(temp, axis=1) != 0
+
+        temp = np.linalg.norm(x_hat, axis=2)
+        active_set_hat = np.linalg.norm(temp, axis=1) != 0
+
+    return f1_score(active_set, active_set_hat)
