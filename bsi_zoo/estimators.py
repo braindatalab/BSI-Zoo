@@ -160,14 +160,18 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
 def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L_0.5 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+
     Which in the case of iterative "sqrt", g(x_i) and w_i are define as follows::
+
     Iterative sqrt (L_0.5)::
         g(x_i) = sqrt(|x_i|)
         w_i^(k+1) <-- [2sqrt(|x_i|)+epsilon]^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
