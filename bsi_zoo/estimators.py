@@ -669,7 +669,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def lemur(L, y, max_iter=1000, max_iter_em=10):
+def lemur(L, y, max_iter=1000, max_iter_em=10, trust_tresh = 0.5, norm = "02"):
     """Latent EM Unsupervised Regression based on https://ieeexplore.ieee.org/document/9746697
 
     Parameters
@@ -696,19 +696,25 @@ def lemur(L, y, max_iter=1000, max_iter_em=10):
     n_sensors, n_sources = L.shape
     _, n_times = y.shape
 
-    def moments(Y):
-        """Moments identification method for Gaussian mixture."""
+    def perform_moments(mixture):
+        """Moments identification method for gaussian mixture."""
 
-        m2, m4, m6 = np.mean(Y ** 2), np.mean(Y ** 4) / 3, np.mean(Y ** 6) / 15
+        m2, m4, m6 = np.mean(mixture ** 2), np.mean(mixture ** 4) / 3, np.mean(mixture ** 6) / 15
 
-        A, B = m4 - m2 ** 2, m6 / m2 - m2 ** 2
-        C = (B / A - 3) * m2
+        a = m2 ** 2 - m4
+        b = m6 - m2 * m4
+        c = m4 ** 2 - m2 * m6
 
-        D = (C ** 2) / 4 + A
-        D = max(0, D)
-        X = -C / 2 + np.sqrt(D)
+        disc = b ** 2 - 4 * a * c
+        if disc<0 :
+            #print("oops")
+            disc = 0
 
-        return (X ** 2 / (A + X ** 2),A / X + X, abs(m2 - X))
+        sigma_b_2 = max( - b - np.sqrt(disc) , - b + np.sqrt(disc) )/(2 * a)
+        sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
+        p = (m2 - sigma_b_2)/sigma_x_2
+        
+        return (p, sigma_x_2, sigma_b_2)
 
     def em_step(obs, param):
         """EM update with x as complete data."""
@@ -737,7 +743,7 @@ def lemur(L, y, max_iter=1000, max_iter_em=10):
 
     for k_inner in range(max_iter):
         z = x + L.T@(y - L@x)/norm# Gradient descent
-        theta = moments(z)# Initialisation of the EM (feel free to find better ones !)
+        theta = perform_moments(z)# Initialisation of the EM (feel free to find better ones !)
         for k_em in range(max_iter_em):
             theta, u, phi = em_step(z, theta)# EM updates
-    return x
+    return (phi>trust_tresh * x.T).T
