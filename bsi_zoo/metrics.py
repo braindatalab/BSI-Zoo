@@ -145,16 +145,18 @@ def nll(x, x_hat, *args, **kwargs):
     subject = kwargs["subject"]
     nnz = kwargs["nnz"]
     
-    stc, stc_hat, active_set, active_set_hat, fwd = _get_active_nnz(x, x_hat, orientation_type, subject, nnz)#kwargs["active_set"]
-
+    # stc, stc_hat, active_set, active_set_hat, fwd = _get_active_nnz(x, x_hat, orientation_type, subject, nnz)#kwargs["active_set"]
+    # q = np.zeros(x.shape[0])
+    # q[active_set] = 1
     # Marginal NegLogLikelihood score upon estimation of the support:
     # ||(cov + L Q L.T)^-1/2 y||^2_F  + log|cov + L Q L.T| with Q the support matrix
-    q = np.zeros(x.shape[0])
-    q[active_set] = 1
-    Q = np.diag(q)
-    cov_y = cov + L@Q@L.T
+    
+    q = np.sum( abs(x_hat) , axis=1) != 0
+    
+    cov_y = cov + (L * q[:,None])@L.T
     # To take into account the knowledge on nnz you need to add +2log((n_sources-nnz)/nnz)||q||_0
-    return np.linalg.norm(np.linalg.sqrt(np.linalg.inv(cov_y)),ord='fro')**2 + np.log(np.linalg.det(cov_y))
+    sign, logdet = np.linalg.slogdet()
+    return np.linalg.norm(np.linalg.sqrt(np.linalg.inv(cov_y)),ord='fro')**2 + logdet
     
 def f1(x, x_hat, orientation_type, *args, **kwargs):
     if orientation_type == "fixed":

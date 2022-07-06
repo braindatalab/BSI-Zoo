@@ -673,7 +673,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=1000, trust_tresh=0.5):
+def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=1000, trust_tresh=0.5):
     """Latent EM Unsupervised Regression based on https://ieeexplore.ieee.org/document/9746697
 
     Parameters
@@ -737,7 +737,7 @@ def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=1000, trust_tresh=0.5):
         s_x = mu*param[2] + mu**2/p * np.mean(phi_k*np.mean(obs**2,axis=1) )
         s_b = np.mean(obs**2) - 2 * mu * np.mean(phi_k*np.mean(obs**2,axis=1)) + p*s_x**2
 
-        X_eap = (phi_k * obs.T).T * s_x / (s_x + s_b)
+        X_eap = obs * phi_k[:,None] * s_x / (s_x + s_b)
 
         return ([p, s_x, s_b], X_eap,phi_k)
     
@@ -749,5 +749,5 @@ def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=1000, trust_tresh=0.5):
         z = x + L.T@(y - L@x)/norm# Gradient descent
         theta = perform_moments(z)# Initialisation of the EM (feel free to find better ones !)
         for k_em in range(max_iter_em):
-            theta, u, phi = em_step(z, theta)# EM updates
-    return (phi>trust_tresh * x.T).T
+            theta, x, phi = em_step(z, theta)# EM updates
+    return  x * (phi>trust_tresh)[:,None]
