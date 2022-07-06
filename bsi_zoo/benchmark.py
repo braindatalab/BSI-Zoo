@@ -9,7 +9,7 @@ from sklearn.model_selection import ParameterGrid
 
 from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import gamma_map, iterative_sqrt
-from bsi_zoo.metrics import euclidean_distance, mse, emd
+from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
 
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     }
     n_jobs = 4
 
-    metrics = [euclidean_distance, mse, emd]  # list of metric functions here
+    metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
 
     estimators = [
         (iterative_sqrt, {"alpha": [0.9, 0.5, 0.2]}),
