@@ -8,7 +8,14 @@ from sklearn.model_selection import ParameterGrid
 
 
 from bsi_zoo.data_generator import get_data
-from bsi_zoo.estimators import gamma_map, iterative_sqrt
+from bsi_zoo.estimators import (
+    iterative_L1,
+    iterative_L2,
+    iterative_L1_typeII,
+    iterative_L2_typeII,
+    gamma_map,
+    iterative_sqrt,
+)
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
 
@@ -103,32 +110,48 @@ class Benchmark:
 
 
 if __name__ == "__main__":
+    n_jobs = 4
+    metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
+    memory = Memory(".")
+
+    """ Fixed orientation parameters for the benchmark """
 
     subject = "CC120264"
-    data_args = {
+    data_args_I = {
         "n_sensors": [50],
         "n_times": [10],
         "n_sources": [200],
         "n_orient": [3],
-        "nnz": [2],
+        "nnz": [2, 5, 10],
         "cov_type": ["diag"],
         "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
         "orientation_type": ["fixed"],
-        "alpha": [0.8, 0.99],  # this is actually SNR
+        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
     }
-    n_jobs = 4
 
-    metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
+    data_args_II = {
+        "n_sensors": [50],
+        "n_times": [10],
+        "n_sources": [200],
+        "n_orient": [3],
+        "nnz": [2, 5, 10],
+        "cov_type": ["full"],
+        "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
+        "orientation_type": ["fixed"],
+        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+    }
 
     estimators = [
-        (iterative_sqrt, {"alpha": [0.9, 0.5, 0.2]}),
-        (gamma_map, {"alpha": [0.9, 0.5]}),
+        (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
     ]
 
-    memory = Memory(".")
-
     df_results = []
-    for estimator, estimator_args in estimators:
+    for estimator, data_args, estimator_args in estimators:
         benchmark = Benchmark(
             estimator,
             subject,
@@ -139,7 +162,68 @@ if __name__ == "__main__":
             memory=memory,
             n_jobs=n_jobs,
         )
-        results = benchmark.run(nruns=2)
+        results = benchmark.run(nruns=10)
+        df_results.append(results)
+
+    df_results = pd.concat(df_results, axis=0)
+
+    data_path = Path("bsi_zoo/data")
+    data_path.mkdir(exist_ok=True)
+    df_results.to_pickle(
+        data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
+    )
+
+    print(df_results)
+
+    """ Fixed orientation parameters for the benchmark """
+
+    subject = "CC120264"
+    data_args_I = {
+        "n_sensors": [50],
+        "n_times": [10],
+        "n_sources": [200],
+        "n_orient": [3],
+        "nnz": [2, 5, 10],
+        "cov_type": ["diag"],
+        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
+        "orientation_type": ["free"],
+        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+    }
+
+    data_args_II = {
+        "n_sensors": [50],
+        "n_times": [10],
+        "n_sources": [200],
+        "n_orient": [3],
+        "nnz": [2],
+        "cov_type": ["full"],
+        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
+        "orientation_type": ["free"],
+        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+    }
+
+    estimators = [
+        (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+    ]
+
+    df_results = []
+    for estimator, data_args, estimator_args in estimators:
+        benchmark = Benchmark(
+            estimator,
+            subject,
+            metrics,
+            data_args,
+            estimator_args,
+            random_state=42,
+            memory=memory,
+            n_jobs=n_jobs,
+        )
+        results = benchmark.run(nruns=10)
         df_results.append(results)
 
     df_results = pd.concat(df_results, axis=0)

@@ -45,9 +45,6 @@ def test_estimator(
     save_estimates=True,
 ):
 
-    if solver != gamma_map and orientation_type == "free":
-        pytest.skip("Free orientation support only for Gamma Map solver currently.")
-
     path_to_leadfield = get_leadfield_path(
         subject, orientation_type
     )  # setting leadfield paths
