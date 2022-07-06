@@ -38,6 +38,7 @@ def _get_active_nnz(x, x_hat, orientation_type, subject, nnz):
     elif orientation_type == "free":
         fwd = convert_forward_solution(fwd)
 
+        # temp = np.linalg.norm
         active_set = np.linalg.norm(x, axis=2) != 0
 
         temp = np.linalg.norm(x_hat, axis=2)
@@ -65,7 +66,11 @@ def jaccard_error(x, x_hat, *args, **kwargs):
     return 1 - jaccard_score(x, x_hat, average="samples")
 
 
-def mse(x, x_hat, *args, **kwargs):
+def mse(x, x_hat, orientation_type, *args, **kwargs):
+    if orientation_type == "free":
+        x = np.linalg.norm(x, axis=2)
+        x_hat = np.linalg.norm(x_hat, axis=2)
+
     return mean_squared_error(x, x_hat)
 
 
