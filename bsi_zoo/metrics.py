@@ -155,8 +155,8 @@ def nll(x, x_hat, *args, **kwargs):
     
     cov_y = cov + (L * q[:,None])@L.T
     # To take into account the knowledge on nnz you need to add +2log((n_sources-nnz)/nnz)||q||_0
-    sign, logdet = np.linalg.slogdet()
-    return np.linalg.norm(np.linalg.sqrt(np.linalg.inv(cov_y)),ord='fro')**2 + logdet
+    sign, logdet = np.linalg.slogdet(cov_y)
+    return np.linalg.norm(np.linalg.sqrtm(np.linalg.inv(cov_y)@y),ord='fro')**2 + logdet
     
 def f1(x, x_hat, orientation_type, *args, **kwargs):
     if orientation_type == "fixed":
