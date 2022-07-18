@@ -15,11 +15,11 @@ from bsi_zoo.estimators import (
 )
 
 
-@pytest.mark.parametrize("n_times", [3, 10])
+@pytest.mark.parametrize("n_times", [5])
 @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
-@pytest.mark.parametrize("nnz", [1, 2, 3])
+@pytest.mark.parametrize("nnz", [3])
 @pytest.mark.parametrize(
-    "subject", [None, "CC120166", "CC120264", "CC120309", "CC120313"]
+    "subject", [None, "CC120166"]
 )
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
@@ -84,10 +84,6 @@ def test_estimator(
 
     if subject is None:
         # dummy data case
-        if (
-            orientation_type == "fixed"
-        ):  # test is too stringent for free orientation setting
-            np.testing.assert_array_equal(x != 0, x_hat != 0)
         np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
 
     else:
