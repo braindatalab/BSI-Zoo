@@ -117,131 +117,127 @@ class Benchmark:
 
 
 if __name__ == "__main__":
-    n_jobs = 4
+    n_jobs = 10
     metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
     memory = Memory(".")
+    
+    for subject in ["CC120166", "CC120264", "CC120309", "CC120313"]:
+        """ Fixed orientation parameters for the benchmark """
 
-    """ Fixed orientation parameters for the benchmark """
+        data_args_I = {
+            "n_sensors": [50],
+            "n_times": [10],
+            "n_sources": [200],
+            "n_orient": [3],
+            "nnz": [2, 5, 10],
+            "cov_type": ["diag"],
+            "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
+            "orientation_type": ["fixed"],
+            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+        }
 
-    subject = "CC120264"
-    data_args_I = {
-        "n_sensors": [50],
-        "n_times": [10],
-        "n_sources": [200],
-        "n_orient": [3],
-        "nnz": [2, 5, 10],
-        "cov_type": ["diag"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
-        "orientation_type": ["fixed"],
-        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
-    }
+        data_args_II = {
+            "n_sensors": [50],
+            "n_times": [10],
+            "n_sources": [200],
+            "n_orient": [3],
+            "nnz": [2, 5, 10],
+            "cov_type": ["full"],
+            "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
+            "orientation_type": ["fixed"],
+            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+        }
 
+        estimators = [
+            (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        ]
 
-    metrics = [euclidean_distance, mse, emd, f1, nll]  # list of metric functions here
+        df_results = []
+        for estimator, data_args, estimator_args in estimators:
+            benchmark = Benchmark(
+                estimator,
+                subject,
+                metrics,
+                data_args,
+                estimator_args,
+                random_state=42,
+                memory=memory,
+                n_jobs=n_jobs,
+            )
+            results = benchmark.run(nruns=5)
+            df_results.append(results)
 
-    data_args_II = {
-        "n_sensors": [50],
-        "n_times": [10],
-        "n_sources": [200],
-        "n_orient": [3],
-        "nnz": [2, 5, 10],
-        "cov_type": ["full"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
-        "orientation_type": ["fixed"],
-        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
-    }
+        df_results = pd.concat(df_results, axis=0)
 
-    estimators = [
-        (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-        (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-    ]
-
-    df_results = []
-    for estimator, data_args, estimator_args in estimators:
-        benchmark = Benchmark(
-            estimator,
-            subject,
-            metrics,
-            data_args,
-            estimator_args,
-            random_state=42,
-            memory=memory,
-            n_jobs=n_jobs,
+        data_path = Path("bsi_zoo/data")
+        data_path.mkdir(exist_ok=True)
+        df_results.to_pickle(
+            data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
         )
-        results = benchmark.run(nruns=10)
-        df_results.append(results)
 
-    df_results = pd.concat(df_results, axis=0)
+        print(df_results)
 
-    data_path = Path("bsi_zoo/data")
-    data_path.mkdir(exist_ok=True)
-    df_results.to_pickle(
-        data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
-    )
+        """ Fixed orientation parameters for the benchmark """
 
-    print(df_results)
+        data_args_I = {
+            "n_sensors": [50],
+            "n_times": [10],
+            "n_sources": [200],
+            "n_orient": [3],
+            "nnz": [2, 5, 10],
+            "cov_type": ["diag"],
+            "path_to_leadfield": [get_leadfield_path(subject, type="free")],
+            "orientation_type": ["free"],
+            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+        }
 
-    """ Fixed orientation parameters for the benchmark """
+        data_args_II = {
+            "n_sensors": [50],
+            "n_times": [10],
+            "n_sources": [200],
+            "n_orient": [3],
+            "nnz": [2],
+            "cov_type": ["full"],
+            "path_to_leadfield": [get_leadfield_path(subject, type="free")],
+            "orientation_type": ["free"],
+            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+        }
 
-    subject = "CC120264"
-    data_args_I = {
-        "n_sensors": [50],
-        "n_times": [10],
-        "n_sources": [200],
-        "n_orient": [3],
-        "nnz": [2, 5, 10],
-        "cov_type": ["diag"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
-        "orientation_type": ["free"],
-        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
-    }
+        estimators = [
+            (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+        ]
 
-    data_args_II = {
-        "n_sensors": [50],
-        "n_times": [10],
-        "n_sources": [200],
-        "n_orient": [3],
-        "nnz": [2],
-        "cov_type": ["full"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
-        "orientation_type": ["free"],
-        "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
-    }
+        df_results = []
+        for estimator, data_args, estimator_args in estimators:
+            benchmark = Benchmark(
+                estimator,
+                subject,
+                metrics,
+                data_args,
+                estimator_args,
+                random_state=42,
+                memory=memory,
+                n_jobs=n_jobs,
+            )
+            results = benchmark.run(nruns=5)
+            df_results.append(results)
 
-    estimators = [
-        (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-        (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-        (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-    ]
+        df_results = pd.concat(df_results, axis=0)
 
-    df_results = []
-    for estimator, data_args, estimator_args in estimators:
-        benchmark = Benchmark(
-            estimator,
-            subject,
-            metrics,
-            data_args,
-            estimator_args,
-            random_state=42,
-            memory=memory,
-            n_jobs=n_jobs,
+        data_path = Path("bsi_zoo/data")
+        data_path.mkdir(exist_ok=True)
+        df_results.to_pickle(
+            data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
         )
-        results = benchmark.run(nruns=10)
-        df_results.append(results)
 
-    df_results = pd.concat(df_results, axis=0)
-
-    data_path = Path("bsi_zoo/data")
-    data_path.mkdir(exist_ok=True)
-    df_results.to_pickle(
-        data_path / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
-    )
-
-    print(df_results)
+        print(df_results)
