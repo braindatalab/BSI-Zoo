@@ -18,9 +18,7 @@ from bsi_zoo.estimators import (
 @pytest.mark.parametrize("n_times", [5])
 @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
 @pytest.mark.parametrize("nnz", [3])
-@pytest.mark.parametrize(
-    "subject", [None, "CC120166"]
-)
+@pytest.mark.parametrize("subject", [None, "CC120166"])
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type",
     [
@@ -42,7 +40,7 @@ def test_estimator(
     subject,
     nnz,
     orientation_type,
-    save_estimates=True,
+    save_estimates=False,
 ):
 
     path_to_leadfield = get_leadfield_path(
