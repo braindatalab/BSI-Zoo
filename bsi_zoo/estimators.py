@@ -717,7 +717,7 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
         sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , np.sqrt(disc)/(2 * a) )
         sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
         p = (m2 - sigma_b_2)/sigma_x_2
-        
+
         sigma_b_2 = abs(sigma_b_2)# worst case scenario
         return (p, sigma_x_2, sigma_b_2)
 
@@ -731,7 +731,7 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
         #s_b = param[2]**2
         
         phi_k = 1/(
-            1 + rho*np.sqrt(param[1]/param[2] + 1) * np.exp( -np.sum(obs**2,axis=1)/2 *mu/param[2] )
+            1 + rho * np.sqrt(param[1]/param[2] + 1) * np.exp( -np.sum(obs**2,axis=1)/2 *mu/param[2] )
             )
 
         p = np.mean(phi_k)
@@ -740,7 +740,7 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
 
         X_eap = obs * phi_k[:,None] * s_x / (s_x + s_b)
 
-        return ([p, s_x, s_b], X_eap,phi_k)
+        return ([p, s_x, abs(s_b)], X_eap,phi_k)#abs as a sanity guideline
     
     x = L.T@y # initialisation of X
     theta_p = [0,0,0] # initialisation of theta        
