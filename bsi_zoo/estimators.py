@@ -714,8 +714,8 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
             #print("oops")
             disc = 0
 
-        sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , - b + np.sqrt(disc)/(2 * a) )
-        sigma_b_2 = max(sigma_b_2 , -sigma_b_2)
+        sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , np.sqrt(disc)/(2 * a) )
+        sigma_b_2 = max(sigma_b_2 , -sigma_b_2)# worst case scenario
         sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
         p = (m2 - sigma_b_2)/sigma_x_2
         
