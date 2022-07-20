@@ -714,7 +714,15 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
             #print("oops")
             disc = 0
 
-        sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , np.sqrt(disc)/(2 * a) )
+        # there are two roots for sigma_b_2, however the good one must be in the interval [0,m2-sqrt(a)]
+
+        if ( - b /(2 * a) - np.sqrt(disc)/(2 * a) )>=0 and ( - b /(2 * a) - np.sqrt(disc)/(2 * a) )<= (m2-np.sqrt(a)) :
+            sigma_b_2 = - b /(2 * a) - np.sqrt(disc)/(2 * a)
+        elif ( - b /(2 * a) + np.sqrt(disc)/(2 * a) )>=0 and ( - b /(2 * a) + np.sqrt(disc)/(2 * a) )<= (m2-np.sqrt(a)) :
+            sigma_b_2 = - b /(2 * a) + np.sqrt(disc)/(2 * a)
+        else :
+            sigma_b_2 = m2-np.sqrt(a)
+        #sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , np.sqrt(disc)/(2 * a) )
         sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
         p = (m2 - sigma_b_2)/sigma_x_2
 
