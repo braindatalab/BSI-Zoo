@@ -715,6 +715,7 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
             disc = 0
 
         sigma_b_2 = max( - b - np.sqrt(disc) , - b + np.sqrt(disc) )/(2 * a)
+        sigma_b_2 = max(sigma_b_2 , 0)
         sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
         p = (m2 - sigma_b_2)/sigma_x_2
         
@@ -726,8 +727,8 @@ def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
         rho = (1-param[0])/param[0]
         mu = param[1]/(param[1]+param[2])
 
-        s_x = param[1]**2
-        s_b = param[2]**2
+        #s_x = param[1]**2
+        #s_b = param[2]**2
         
         phi_k = 1/(
             1 + rho*np.sqrt(param[1]/param[2] + 1) * np.exp( -np.sum(obs**2,axis=1)/2 *mu/param[2] )
