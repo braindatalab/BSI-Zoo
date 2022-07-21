@@ -673,7 +673,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def lemur(L, y, alpha=0.2, max_iter=100, max_iter_em=100, trust_tresh=0.5):
+def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=100, trust_tresh=0.5):
     """Latent EM Unsupervised Regression based on https://ieeexplore.ieee.org/document/9746697
 
     Parameters
