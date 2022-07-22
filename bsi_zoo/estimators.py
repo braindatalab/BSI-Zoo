@@ -764,5 +764,6 @@ def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=100, trust_tresh=0.5):
         for k_em in range(max_iter_em):
             theta, x, phi = em_step(z, theta)# EM updates
     x_res = np.zeros(np.shape(x))
-    x_res[phi[:,None]>trust_tresh] = x[phi[:,None]>trust_tresh]
+    active =  phi>trust_tresh
+    x_res[active,:] = x[active,:]
     return  x_res
