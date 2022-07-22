@@ -137,6 +137,29 @@ def euclidean_distance(x, x_hat, orientation_type, subject, nnz, *args, **kwargs
     return np.mean(euclidean_distance)
 
 
+def nll(x, x_hat, *args, **kwargs):
+    y = kwargs["y"]
+    L = kwargs["L"]
+    cov = kwargs["cov"]
+    # orientation_type = kwargs["orientation_type"]
+    # subject = kwargs["subject"]
+    # nnz = kwargs["nnz"]
+
+    # Marginal NegLogLikelihood score upon estimation of the support:
+    # ||(cov + L Q L.T)^-1/2 y||^2_F  + log|cov + L Q L.T| with Q the support matrix
+
+    active_set = np.sum(x_hat, axis=1) != 0
+    cov_x = np.var(x_hat[active_set], axis=1)
+    cov_y_hat = np.cov(y)
+    # cov_y = cov + L @ np.diag(Cov_x) @ L.T -> but more efficient below:
+    L = L[:, active_set]
+    cov_y = cov + (L * cov_x[None, :]) @ L.T
+    precision_y = np.linalg.inv(cov_y)
+    _, logdet = np.linalg.slogdet(precision_y)
+    return (0.5 * (np.trace(precision_y @ cov_y_hat) + logdet) +
+            0.5 * np.log(2 * np.pi) * L.shape[0])
+
+
 def f1(x, x_hat, orientation_type, *args, **kwargs):
     if orientation_type == "fixed":
         active_set = np.linalg.norm(x, axis=1) != 0

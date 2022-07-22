@@ -671,3 +671,99 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     x[active_set, :] = x_bar
 
     return x
+
+
+def lemur(L, y, alpha=0.2, max_iter=1000, max_iter_em=100, trust_tresh=0.9):
+    """Latent EM Unsupervised Regression based on https://ieeexplore.ieee.org/document/9746697
+
+    Parameters
+    ----------
+    L : array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y : array, shape (n_sensors,)
+        measurement vector, capturing sensor measurements
+    max_iter : int, optional
+        The maximum number of inner loop iterations
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations
+
+    Returns
+    -------
+    x : array, shape (n_sources,)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost
+        function formula).
+
+    References
+    ----------
+    XXX
+    """
+    n_sensors, n_sources = L.shape
+    _, n_times = y.shape
+
+    def perform_moments(mixture):
+        """Moments identification method for gaussian mixture."""
+
+        m2, m4, m6 = np.mean(mixture ** 2), np.mean(mixture ** 4) / 3, np.mean(mixture ** 6) / 15
+
+        a = m2 ** 2 - m4
+        b = m6 - m2 * m4
+        c = m4 ** 2 - m2 * m6
+
+        if a > 0 :
+            tresh = m2-np.sqrt(a)
+        else :
+            tresh = m2
+
+        disc = b ** 2 - 4 * a * c
+        if disc<0 :
+            #print("oops")
+            disc = 0
+
+        # there are two roots for sigma_b_2, however the good one must be in the interval [0,m2-sqrt(a)]
+
+        if ( - b /(2 * a) - np.sqrt(disc)/(2 * a) )>=0 and ( - b /(2 * a) - np.sqrt(disc)/(2 * a) )<= tresh :
+            sigma_b_2 = - b /(2 * a) - np.sqrt(disc)/(2 * a)
+        elif ( - b /(2 * a) + np.sqrt(disc)/(2 * a) )>=0 and ( - b /(2 * a) + np.sqrt(disc)/(2 * a) )<= tresh :
+            sigma_b_2 = - b /(2 * a) + np.sqrt(disc)/(2 * a)
+        else :
+            sigma_b_2 = 0.99*tresh # worst case scenario
+        #sigma_b_2 = - b /(2 * a) + max( - np.sqrt(disc)/(2 * a) , np.sqrt(disc)/(2 * a) )
+        sigma_x_2 = (m4 - sigma_b_2 ** 2)/(m2 - sigma_b_2) - 2 * sigma_b_2
+        p = (m2 - sigma_b_2)/sigma_x_2
+
+        return (p, sigma_x_2, sigma_b_2)
+
+    def em_step(obs, param):
+        """EM update with x as complete data."""
+
+        rho = (1-param[0])/param[0]
+        mu = param[1]/(param[1]+param[2])
+
+        #s_x = param[1]**2
+        #s_b = param[2]**2
+        
+        phi_k = 1/(
+            1 + rho * np.sqrt(param[1]/param[2] + 1) * np.exp( -np.sum(obs**2,axis=1)/2 *mu/param[2] )
+            )
+
+        p = np.mean(phi_k)
+        s_x = mu*param[2] + mu**2/p * np.mean(phi_k*np.mean(obs**2,axis=1) )
+        s_b = np.mean(obs**2) - 2 * mu * np.mean(phi_k*np.mean(obs**2,axis=1)) + p*s_x**2
+
+        X_eap = obs * phi_k[:,None] * s_x / (s_x + s_b)
+
+        return ([p, s_x, abs(s_b)], X_eap,phi_k)#abs as a sanity guideline
+    
+    x = L.T@y # initialisation of X
+    theta_p = [0,0,0] # initialisation of theta        
+    norm = np.linalg.norm(L@L.T,2)
+
+    for k_inner in range(max_iter):
+        z = x + L.T@(y - L@x)/norm# Gradient descent
+        theta = perform_moments(z)# Initialisation of the EM (feel free to find better ones !)
+        for k_em in range(max_iter_em):
+            theta, x, phi = em_step(z, theta)# EM updates
+    x_res = np.zeros(np.shape(x))
+    active =  phi>trust_tresh
+    x_res[active,:] = x[active,:]
+    return  x_res
