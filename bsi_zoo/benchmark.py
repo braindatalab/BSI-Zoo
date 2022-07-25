@@ -126,7 +126,7 @@ if __name__ == "__main__":
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
-            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+            "alpha": [0.9, 0.8, 0.6, 0.5, 0.4],  # this is actually SNR
         }
 
         data_args_II = {
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             "cov_type": ["full"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
-            "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
+            "alpha": [0.9, 0.8, 0.6, 0.5, 0.4],  # this is actually SNR
         }
 
         estimators = [
@@ -182,7 +182,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [2, 5, 10],
+            "nnz": [2, 5, 7],
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="free")],
             "orientation_type": ["free"],
