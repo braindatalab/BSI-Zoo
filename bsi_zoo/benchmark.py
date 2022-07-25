@@ -16,7 +16,7 @@ from bsi_zoo.estimators import (
     gamma_map,
     iterative_sqrt,
 )
-from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
+from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, nll
 from bsi_zoo.config import get_leadfield_path
 
 
@@ -111,7 +111,7 @@ class Benchmark:
 
 if __name__ == "__main__":
     n_jobs = 10
-    metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
+    metrics = [euclidean_distance, mse, emd, f1, nll]  # list of metric functions here
     memory = Memory(".")
 
     for subject in ["CC120166", "CC120264", "CC120309", "CC120313"]:
