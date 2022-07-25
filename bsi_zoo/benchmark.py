@@ -55,6 +55,9 @@ def _run_estimator(
             subject=subject,
             orientation_type=this_data_args["orientation_type"],
             nnz=this_data_args["nnz"],
+            y=y,
+            L=L,
+            cov=cov
         )
         this_results[metric.__name__] = metric_score
     this_results.update(this_data_args)
