@@ -152,21 +152,15 @@ def f1(x, x_hat, orientation_type, *args, **kwargs):
     return f1_score(active_set, active_set_hat)
 
 
-def nll(x, x_hat, orientation_type, *args, **kwargs):
+def nll(x, x_hat, *args, **kwargs):
     y = kwargs["y"]
     L = kwargs["L"]
     cov = kwargs["cov"]
 
     # Marginal NegLogLikelihood score upon estimation of the support:
     # ||(cov + L Q L.T)^-1/2 y||^2_F  + log|cov + L Q L.T| with Q the support matrix
-    if orientation_type == "fixed":
-        active_set = np.linalg.norm(x, axis=1) != 0
 
-    elif orientation_type == "free":
-        temp = np.linalg.norm(x, axis=2)
-        active_set = np.linalg.norm(temp, axis=1) != 0
-
-    #active_set = np.sum(x_hat, axis=1) != 0
+    active_set = np.sum(x_hat, axis=1) != 0
     cov_x = np.var(x_hat[active_set], axis=1)
     cov_y_hat = np.cov(y)
     # cov_y = cov + L @ np.diag(Cov_x) @ L.T -> but more efficient below:
