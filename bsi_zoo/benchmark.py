@@ -115,6 +115,7 @@ class Benchmark:
 if __name__ == "__main__":
     n_jobs = 10
     metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
+    estimator_alphas = [0.01, 0.01544452, 0.02385332, 0.03684031, 0.0568981 , 0.08787639, 0.13572088, 0.2096144 , 0.3237394 , 0.5] #logspaced
     memory = Memory(".")
 
     for subject in ["CC120166", "CC120264", "CC120309", "CC120313"]:
@@ -145,12 +146,12 @@ if __name__ == "__main__":
         }
 
         estimators = [
-            (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-            (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L1, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_L2, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
+            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas}),
         ]
 
         df_results = []
@@ -205,12 +206,12 @@ if __name__ == "__main__":
         }
 
         estimators = [
-            (iterative_L1, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L2, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_sqrt, data_args_I, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L1_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-            (iterative_L2_typeII, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
-            (gamma_map, data_args_II, {"alpha": [0.2, 0.1, 0.01]}),
+            (iterative_L1, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_L2, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}),
+            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
+            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas}),
         ]
 
         df_results = []
