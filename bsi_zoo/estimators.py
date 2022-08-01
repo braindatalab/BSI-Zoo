@@ -456,7 +456,7 @@ def gamma_map(
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
 
-    alpha = mean(np.diag(cov))
+    # alpha = mean(np.diag(cov)) accept alpha from params instead
 
     if gammas is None:
         gammas = np.ones(L.shape[1])
@@ -476,7 +476,7 @@ def gamma_map(
     # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     # L /= L_normalize_constant
 
-    threshold = 0.2 * alpha
+    threshold = 0.2 * mean(np.diag(cov))
 
     if n_sources % group_size != 0:
         raise ValueError(
