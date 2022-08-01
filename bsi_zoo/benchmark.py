@@ -114,7 +114,7 @@ class Benchmark:
 
 if __name__ == "__main__":
     n_jobs = 10
-    metrics = [euclidean_distance, mse, emd, f1, nll]  # list of metric functions here
+    metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
     memory = Memory(".")
 
     for subject in ["CC120166", "CC120264", "CC120309", "CC120313"]:
@@ -125,7 +125,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [2, 5, 10],
+            "nnz": [1, 2, 5, 7],
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
@@ -137,7 +137,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [2, 5, 10],
+            "nnz": [1, 2, 5, 7],
             "cov_type": ["full"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
@@ -185,7 +185,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [2, 5, 7],
+            "nnz": [1, 2, 5, 7],
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="free")],
             "orientation_type": ["free"],
@@ -197,7 +197,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [2],
+            "nnz": [1, 2, 5, 7],
             "cov_type": ["full"],
             "path_to_leadfield": [get_leadfield_path(subject, type="free")],
             "orientation_type": ["free"],
