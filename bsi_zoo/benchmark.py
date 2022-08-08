@@ -1,3 +1,4 @@
+import numpy as np
 import itertools
 from pathlib import Path
 from scipy import linalg
@@ -16,7 +17,7 @@ from bsi_zoo.estimators import (
     gamma_map,
     iterative_sqrt,
 )
-from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, nll
+from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
 
 
@@ -49,19 +50,24 @@ def _run_estimator(
 
     this_results = dict(estimator=estimator_name)
     for metric in metrics:
-        metric_score = metric(
-            x,
-            x_hat,
-            subject=subject,
-            orientation_type=this_data_args["orientation_type"],
-            nnz=this_data_args["nnz"],
-            y=y,
-            L=L,
-            cov=cov
-        )
+        try: 
+            metric_score = metric(
+                x,
+                x_hat,
+                subject=subject,
+                orientation_type=this_data_args["orientation_type"],
+                nnz=this_data_args["nnz"],
+                y=y,
+                L=L,
+                cov=cov
+            )
+        except Exception:
+            # estimators that predict less vertices for certain parameter combinations; these cannot be evaluated by all current metrics 
+            metric_score = np.nan
         this_results[metric.__name__] = metric_score
     this_results.update(this_data_args)
     this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
+
     return this_results
 
 
@@ -115,10 +121,11 @@ class Benchmark:
 if __name__ == "__main__":
     n_jobs = 10
     metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
-    estimator_alphas = [0.01, 0.01544452, 0.02385332, 0.03684031, 0.0568981 , 0.08787639, 0.13572088, 0.2096144 , 0.3237394 , 0.5] #logspaced
+    nnzs = [1, 2, 3, 5]
+    estimator_alphas = [0.01, 0.01544452, 0.02385332, 0.03684031, 0.0568981 , 0.08787639, 0.13572088, 0.2096144] #logspaced
     memory = Memory(".")
 
-    for subject in ["CC120166", "CC120264", "CC120309", "CC120313"]:
+    for subject in ["CC120166", "CC120264", "CC120313", "CC120309"]:
         """ Fixed orientation parameters for the benchmark """
 
         data_args_I = {
@@ -126,7 +133,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [1, 2, 5, 7],
+            "nnz": nnzs,
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
@@ -138,7 +145,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [1, 2, 5, 7],
+            "nnz": nnzs,
             "cov_type": ["full"],
             "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
             "orientation_type": ["fixed"],
@@ -166,7 +173,7 @@ if __name__ == "__main__":
                 memory=memory,
                 n_jobs=n_jobs,
             )
-            results = benchmark.run(nruns=5)
+            results = benchmark.run(nruns=10)
             df_results.append(results)
 
         df_results = pd.concat(df_results, axis=0)
@@ -179,14 +186,14 @@ if __name__ == "__main__":
 
         print(df_results)
 
-        """ Fixed orientation parameters for the benchmark """
+        """ Free orientation parameters for the benchmark """
 
         data_args_I = {
             "n_sensors": [50],
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [1, 2, 5, 7],
+            "nnz": nnzs,
             "cov_type": ["diag"],
             "path_to_leadfield": [get_leadfield_path(subject, type="free")],
             "orientation_type": ["free"],
@@ -198,7 +205,7 @@ if __name__ == "__main__":
             "n_times": [10],
             "n_sources": [200],
             "n_orient": [3],
-            "nnz": [1, 2, 5, 7],
+            "nnz": nnzs,
             "cov_type": ["full"],
             "path_to_leadfield": [get_leadfield_path(subject, type="free")],
             "orientation_type": ["free"],
@@ -226,7 +233,7 @@ if __name__ == "__main__":
                 memory=memory,
                 n_jobs=n_jobs,
             )
-            results = benchmark.run(nruns=5)
+            results = benchmark.run(nruns=10)
             df_results.append(results)
 
         df_results = pd.concat(df_results, axis=0)
