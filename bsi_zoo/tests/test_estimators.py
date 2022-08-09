@@ -26,7 +26,7 @@ from bsi_zoo.estimators import (
         (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
         (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (iterative_L2_typeII, 0.1, 1e-1, 1e-1, "full"),
+        (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full"),
         (gamma_map, 0.2, 1e-1, 5e-1, "full"),
     ],
 )
