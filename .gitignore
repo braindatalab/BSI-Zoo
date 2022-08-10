@@ -17,6 +17,7 @@ build
 *cachedir/
 dist/
 
+bsi_zoo/tests/data
 doc/_build/
 doc/generated
 doc/auto_examples/
@@ -27,3 +28,12 @@ pip-log.txt
 .tags
 tags
 .coverage
+*.npz
+*.fif
+*.ipynb
+*.zip
+figures
+*.png
+joblib
+
+bsi_zoo/data/*

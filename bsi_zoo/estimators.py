@@ -205,14 +205,18 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
 
 def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L_0.5 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+
     Which in the case of iterative "sqrt", g(x_i) and w_i are define as follows::
+
     Iterative sqrt (L_0.5)::
         g(x_i) = sqrt(|x_i|)
         w_i^(k+1) <-- [2sqrt(|x_i|)+epsilon]^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -497,7 +501,7 @@ def gamma_map(
     if isinstance(cov, float):
         cov = cov * np.eye(n_sensors)
 
-    alpha = mean(np.diag(cov))
+    # alpha = mean(np.diag(cov)) accept alpha from params instead
 
     if gammas is None:
         gammas = np.ones(L.shape[1])
@@ -517,7 +521,7 @@ def gamma_map(
     # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
     # L /= L_normalize_constant
 
-    threshold = 0.2 * alpha
+    threshold = 0.2 * mean(np.diag(cov))
 
     if n_sources % group_size != 0:
         raise ValueError(
@@ -564,26 +568,6 @@ def gamma_map(
         Sigma_y_inv = np.dot(U / (S + eps), U.T)
         Sigma_y_invL = np.dot(Sigma_y_inv, L)
         A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
-
-        # heteroscedastic update rule
-        W = np.dot(np.diag(gammas), np.dot(L.T, Sigma_y_inv))
-        x_bar = np.dot(W, y)
-        residual = y - np.dot(L, x_bar)
-
-        M_noise = np.dot(residual, residual.T) / n_times
-        # cov = np.diag(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
-        alpha = np.mean(np.sqrt((np.diag(M_noise) / np.diag(Sigma_y_inv))))
-
-        # # M_N = linalg.norm(M - np.dot(G, gammas[:, None] * A), ord = 'fro') ** 2 / n_samples
-        # # Lambda = np.diag(np.sqrt(np.divide(M_N, CMinv)))
-        # # alpha2 = np.mean(np.diag(Lambda))
-
-        # # homoscedastic update rule
-        # LW = np.identity(n_sensors)-np.dot(L,W)
-        # Cyy = np.dot(y, y.T) / n_times
-        # noise_numer = np.mean(np.sum(np.dot(np.dot(LW,Cyy),LW),1))
-        # noise_denom = np.mean(np.diag(Sigma_y_inv))
-        # alpha = np.sqrt(noise_numer / noise_denom)
 
         if update_mode == 1:
             # MacKay fixed point update
