@@ -401,7 +401,7 @@ def gamma_map(
     alpha=0.2,
     max_iter=1000,
     tol=1e-15,
-    update_mode=3,
+    update_mode=2,
     threshold=1e-5,
     gammas=None,
     group_size=1,
