@@ -401,7 +401,7 @@ def gamma_map(
     alpha=0.2,
     max_iter=1000,
     tol=1e-15,
-    update_mode=2,
+    update_mode=1,
     threshold=1e-5,
     gammas=None,
     group_size=1,
@@ -541,7 +541,7 @@ def gamma_map(
             )
         else:
             raise ValueError("Invalid value for update_mode")
-
+            
         if group_size == 1:
             if denom is None:
                 gammas = numer
