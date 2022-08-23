@@ -20,16 +20,18 @@ from bsi_zoo.estimators import (
 @pytest.mark.parametrize("orientation_type", ["fixed"])
 @pytest.mark.parametrize("nnz", [3])
 @pytest.mark.parametrize("subject", [None, "CC120166"])
-@pytest.mark.parametrize("noise_update", [0,1,2])
+# @pytest.mark.parametrize("noise_update_mode", [0,1,2])
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol,cov_type",
+    "solver,alpha,rtol,atol,cov_type,noise_update_mode",
     [
         # (iterative_L1, 0.01, 1e-1, 5e-1, "diag"),
         # (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
         # (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
         # (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
         # (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (gamma_map, 1e-1, 1e-1, 5e-1, "full"),
+        (gamma_map, 1e-1, 1e-1, 5e-1, "full",0),
+        # (gamma_map, 1e-1, 1e-1, 5e-1, "full",1),
+        # (gamma_map, 1e-1, 1e-1, 5e-1, "full",2),
     ],
 )
 def test_estimator(
@@ -39,6 +41,7 @@ def test_estimator(
     rtol,
     atol,
     cov_type,
+    noise_update_mode,
     subject,
     nnz,
     orientation_type,
