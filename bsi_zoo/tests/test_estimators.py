@@ -20,14 +20,16 @@ from bsi_zoo.estimators import (
 @pytest.mark.parametrize("nnz", [3])
 @pytest.mark.parametrize("subject", [None, "CC120166"])
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol,cov_type",
+    "solver,alpha,rtol,atol,cov_type,extra_params", 
     [
-        (iterative_L1, 0.01, 1e-1, 5e-1, "diag"),
-        (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
-        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
-        # (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
-        # (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (gamma_map, 0.2, 1e-1, 5e-1, "full"),
+        (iterative_L1, 0.01, 1e-1, 5e-1, "diag", {}),
+        (iterative_L2, 0.01, 1e-1, 5e-1, "diag", {}),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),
+        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full",{}),
+        (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full",{}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode":1}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode":2}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode":3}),
     ],
 )
 def test_estimator(
@@ -40,6 +42,7 @@ def test_estimator(
     subject,
     nnz,
     orientation_type,
+    extra_params,
     save_estimates=False,
 ):
 
@@ -61,9 +64,9 @@ def test_estimator(
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y, alpha=alpha)
+        x_hat = solver(L, y, alpha=alpha, **extra_params)
     else:
-        x_hat = solver(L, y, cov, alpha=alpha)
+        x_hat = solver(L, y, cov, alpha=alpha, **extra_params)
 
     if orientation_type == "free":
         x_hat = x_hat.reshape(x.shape)
