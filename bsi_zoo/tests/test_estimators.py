@@ -16,9 +16,11 @@ from bsi_zoo.estimators import (
 
 # TODO: make the iterative type-II methods more efficient
 @pytest.mark.parametrize("n_times", [5])
-@pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+# @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+@pytest.mark.parametrize("orientation_type", ["fixed"])
 @pytest.mark.parametrize("nnz", [3])
-@pytest.mark.parametrize("subject", [None, "CC120166"])
+# @pytest.mark.parametrize("subject", [None, "CC120166"])
+@pytest.mark.parametrize("subject", [None])
 @pytest.mark.parametrize(
     "solver,alpha,rtol,atol,cov_type,extra_params", 
     [
@@ -60,13 +62,16 @@ def test_estimator(
         path_to_leadfield=path_to_leadfield,
         orientation_type=orientation_type,
     )
+    
+    n_orient = 1 if orientation_type == "fixed" else 3
+
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y, alpha=alpha, **extra_params)
+        x_hat = solver(L, y, alpha=alpha, n_orient=n_orient, **extra_params)
     else:
-        x_hat = solver(L, y, cov, alpha=alpha, **extra_params)
+        x_hat = solver(L, y, cov, alpha=alpha, n_orient=n_orient, **extra_params)
 
     if orientation_type == "free":
         x_hat = x_hat.reshape(x.shape)
