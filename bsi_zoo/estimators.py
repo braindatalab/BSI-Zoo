@@ -79,7 +79,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     XXX
     """
-    assert n_orient == 1, "not implemented yet"
+    assert n_orient != 1, "not implemented yet"
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -140,13 +140,12 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    assert n_orient == 1, "not implemented yet"
+    assert n_orient != 1, "not implemented yet"
 
     # XXX : cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
-    n_orient = 1
 
     def g(w):
         return groups_norm2(w.copy(), n_orient)
@@ -200,10 +199,9 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     ----------
     TODO
     """
-    assert n_orient == 1, "not implemented yet"
+    assert n_orient != 1, "not implemented yet"
     _, n_sources = L.shape
     weights = np.ones(n_sources)
-    n_orient = 1
 
     def g(w):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
@@ -271,7 +269,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
     ----------
     TODO
     """
-    assert n_orient == 1, "not implemented yet"
+    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -363,7 +361,7 @@ def iterative_L2_typeII(
     ----------
     XXX
     """
-    assert n_orient == 1, "not implemented yet"
+    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -649,7 +647,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_rewe
     ----------
     XXX
     """
-    assert n_orient == 1, "Only 1 orientation is supported"
+    assert n_orient != 1, "Only 1 orientation is supported"
     n_sensors, n_sources = L.shape
     _, n_times = y.shape
     gammas = np.ones(n_sources)
