@@ -4,12 +4,12 @@
 
 
 $$
-\boldsymbol{x}^{(k+1)} \leftarrow \arg \min _{\boldsymbol{x}}\|\boldsymbol{y}-{\bf L} \boldsymbol{x}\|_{2}^{2}+\lambda \sum_{i} g(x_{i})
+\boldsymbol{x}^{(k+1)} \leftarrow \arg \min_{\boldsymbol{x}}\|\boldsymbol{y}-{\bf L} \boldsymbol{x}\|_{2}^{2}+\lambda \sum_{i} g(x_{i})
 $$
 
-\begin{equation}
-\boldsymbol{x}^{(k+1)} \leftarrow \arg \min _{\boldsymbol{x}}\|\boldsymbol{y}-{\bf L} \boldsymbol{x}\|_{2}^{2}+\lambda \sum_{i} w_{i}^{(k)}\left|x_{i}\right|
-\end{equation}
+$$
+\boldsymbol{x}^{(k+1)} \leftarrow \arg \min_{\boldsymbol{x}}\|\boldsymbol{y}-{\bf L} \boldsymbol{x}\|_{2}^{2}+\lambda \sum_{i} w_{i}^{(k)}\left|x_{i}\right|
+$$
 
 ## Single Vector Measurement (SVM) Models
 
