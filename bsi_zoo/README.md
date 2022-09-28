@@ -2,10 +2,9 @@
 
 * Should define a function called "get_estimator" that returns a **scikit-learn type of pipeline**.
 
-
-$$
+\begin{align}
 \boldsymbol{x}^{(k+1)} \leftarrow \arg \min_{\boldsymbol{x}}||\boldsymbol{y}-{\bf L}\boldsymbol{x}||_{2}^{2}+\lambda \sum_{i}g(x_{i})
-$$
+\end{align}
 
 $$
 \boldsymbol{x}^{(k+1)} \leftarrow \arg \min_{\boldsymbol{x}}||\boldsymbol{y}-{\bf L}\boldsymbol{x}||_{2}^{2}+\lambda \sum_{i}w_{i}^{(k)}\left|x_{i}\right|
