@@ -387,10 +387,12 @@ def iterative_L2_typeII(
             proj_source_cov = (L @ w_mat(weights)) @ L_T
             signal_cov = noise_cov + proj_source_cov
             sigmaY_inv = linalg.inv(signal_cov)
-            return np.diag(
-                w_mat(weights)
-                - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
-            )
+            # Full computation (slow):
+            # np.diag(
+            #     w_mat(weights)
+            #     - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
+            # )
+            return weights - (weights ** 2) * ((L_T @ sigmaY_inv) * L_T).sum(axis=1)
 
         def g_coef(coef):
             return groups_norm2(coef.copy(), n_orient)
