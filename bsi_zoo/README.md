@@ -1,3 +1,5 @@
+Please Check this link for correct written version of the formulas: https://hackmd.io/eD0zmafwTEuiMJreiSHoFA?view
+
 ## Iterative methdos
 
 * Should define a function called "get_estimator" that returns a **scikit-learn type of pipeline**.
