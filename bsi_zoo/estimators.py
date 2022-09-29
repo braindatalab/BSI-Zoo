@@ -284,6 +284,8 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
         def w_mat(weights):
+            # XXX it should be possible to avoid allocating a big matrix
+            # of size n_sources x n_sources
             return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
 
         if coef.ndim < 2:
