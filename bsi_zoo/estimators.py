@@ -376,7 +376,6 @@ def iterative_L2_typeII(
     def gprime(coef):
         L_T = L.T
         n_samples, _ = L.shape
-        n_orient = 1
 
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
