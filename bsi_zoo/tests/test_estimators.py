@@ -15,19 +15,24 @@ from bsi_zoo.estimators import (
 )
 
 
+# TODO: make the iterative type-II methods more efficient
 @pytest.mark.parametrize("n_times", [5])
-@pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+# @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
+@pytest.mark.parametrize("orientation_type", ["free"])
 @pytest.mark.parametrize("nnz", [3])
-@pytest.mark.parametrize("subject", [None, "CC120166"])
+# @pytest.mark.parametrize("subject", [None, "CC120166"])
+@pytest.mark.parametrize("subject", [None])
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol,cov_type",
+    "solver,alpha,rtol,atol,cov_type,extra_params",
     [
-        (iterative_L1, 0.01, 1e-1, 5e-1, "diag"),
-        (iterative_L2, 0.01, 1e-1, 5e-1, "diag"),
-        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag"),
-        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full"),
-        (gamma_map, 0.2, 1e-1, 5e-1, "full"),
+        (iterative_L1, 0.01, 1e-1, 5e-1, "diag", {}),
+        (iterative_L2, 0.01, 1e-1, 5e-1, "diag", {}),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),
+        (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full", {}),
+        (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full", {}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode": 1}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode": 2}),
+        (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode": 3}),
     ],
 )
 def test_estimator(
@@ -40,6 +45,7 @@ def test_estimator(
     subject,
     nnz,
     orientation_type,
+    extra_params,
     save_estimates=False,
 ):
 
@@ -57,13 +63,16 @@ def test_estimator(
         path_to_leadfield=path_to_leadfield,
         orientation_type=orientation_type,
     )
+
+    n_orient = 1 if orientation_type == "fixed" else 3
+
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y, alpha=alpha)
+        x_hat = solver(L, y, alpha=alpha, n_orient=n_orient, **extra_params)
     else:
-        x_hat = solver(L, y, cov, alpha=alpha)
+        x_hat = solver(L, y, cov, alpha=alpha, n_orient=n_orient, **extra_params)
 
     if orientation_type == "free":
         x_hat = x_hat.reshape(x.shape)

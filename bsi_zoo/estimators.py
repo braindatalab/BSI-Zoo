@@ -47,7 +47,7 @@ def _solve_reweighted_lasso(
     return x
 
 
-def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
@@ -65,6 +65,7 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 1.0
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -78,10 +79,10 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     XXX
     """
+    assert n_orient != 1, "not implemented yet"
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
-    n_orient = 1
 
     def g(w):
         return np.sqrt(groups_norm2(w.copy(), n_orient))
@@ -99,7 +100,7 @@ def iterative_L1(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L2 regularizer.
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
@@ -118,6 +119,7 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2.
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -127,20 +129,23 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
         smaller than ``tol``, the optimization code checks the
         dual gap for optimality and continues until it is smaller
         than ``tol``.
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     TODO
     """
+    assert n_orient != 1, "not implemented yet"
+
     # XXX : cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
-    n_orient = 1
 
     def g(w):
         return groups_norm2(w.copy(), n_orient)
@@ -158,7 +163,7 @@ def iterative_L2(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L_0.5 regularizer.
 
     The optimization objective for iterative estimators in general is::
@@ -181,6 +186,7 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2.
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -193,9 +199,9 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     TODO
     """
+    assert n_orient != 1, "not implemented yet"
     _, n_sources = L.shape
     weights = np.ones(n_sources)
-    n_orient = 1
 
     def g(w):
         return np.sqrt(np.sqrt(groups_norm2(w.copy(), n_orient)))
@@ -213,8 +219,9 @@ def iterative_sqrt(L, y, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     return x
 
 
-def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-II estimator with L_1 regularizer.
+
     The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
     Which in the case of iterative L1 Type-II , g_SBl(x) and w_i are define
@@ -228,10 +235,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         hat{X} = diag(X)^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     NOTE: Please note that lambda models the noise variance and it is a
     different paramter than regularization paramter alpha. For simplicity,
     we assume lambda = alpha to be consistant with sklearn built-in
     function: "linear_model.LassoLars"
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -244,19 +253,23 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     TODO
     """
+    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -267,13 +280,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
         cov = cov * np.eye(n_sensors)
 
     def gprime(coef):
-        n_orient = 1
-        L_T = L.T
-
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
         def w_mat(weights):
+            # XXX it should be possible to avoid allocating a big matrix
+            # of size n_sources x n_sources
             return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
 
         if coef.ndim < 2:
@@ -284,11 +296,12 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
             X = coef @ coef.T
             x_mat = np.diag(linalg.norm(X, axis=0))
         noise_cov = cov
-        proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L_T
+        proj_source_cov = (L @ np.dot(w_mat(weights), x_mat)) @ L.T
         signal_cov = noise_cov + proj_source_cov
         sigmaY_inv = linalg.inv(signal_cov)
 
-        return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
+        return 1.0 / np.sqrt(np.sum((L.T @ sigmaY_inv) * L.T, axis=1))
+        # return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
     x = _solve_reweighted_lasso(
         L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
@@ -298,7 +311,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, max_iter=1000, max_iter_reweightin
 
 
 def iterative_L2_typeII(
-    L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10
+    L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
 ):
     """Iterative Type-II estimator with L_2 regularizer.
     The optimization objective for iterative Type-II methods is::
@@ -336,6 +349,7 @@ def iterative_L2_typeII(
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -349,6 +363,7 @@ def iterative_L2_typeII(
     ----------
     XXX
     """
+    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -361,23 +376,25 @@ def iterative_L2_typeII(
     def gprime(coef):
         L_T = L.T
         n_samples, _ = L.shape
-        n_orient = 1
 
         def g(weights):
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
         def w_mat(weights):
-            return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
+            return 1.0 / np.repeat(g(weights), n_orient).ravel()
 
         def epsilon_update(L, weights, cov):
             noise_cov = cov  # extension of method by importing the noise covariance
-            proj_source_cov = (L @ w_mat(weights)) @ L_T
+            weights_ = w_mat(weights)
+            proj_source_cov = (L * weights_[np.newaxis, :]) @ L_T
             signal_cov = noise_cov + proj_source_cov
             sigmaY_inv = linalg.inv(signal_cov)
-            return np.diag(
-                w_mat(weights)
-                - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
-            )
+            # Full computation (slow):
+            # np.diag(
+            #     w_mat(weights)
+            #     - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
+            # )
+            return weights_ - (weights_ ** 2) * ((L_T @ sigmaY_inv) * L_T).sum(axis=1)
 
         def g_coef(coef):
             return groups_norm2(coef.copy(), n_orient)
@@ -401,10 +418,10 @@ def gamma_map(
     alpha=0.2,
     max_iter=1000,
     tol=1e-15,
-    update_mode=3,
+    update_mode=2,
     threshold=1e-5,
     gammas=None,
-    group_size=1,
+    n_orient=1,
 ):
     """Gamma_map method based on MNE package
 
@@ -433,7 +450,7 @@ def gamma_map(
     gammas : array, shape=(n_sources,)
         Initial values for posterior variances (gammas). If None, a
         variance of 1.0 is used.
-    group_size : int
+    n_orient : int
         Number of consecutive sources which use the same gamma.
 
     Returns
@@ -446,6 +463,7 @@ def gamma_map(
     ----------
     XXX
     """
+    group_size = n_orient  # for compatibility with MNE implementation
     eps = np.finfo(float).eps
     n_sensors, n_sources = L.shape
     if y.ndim < 2:
@@ -602,7 +620,7 @@ def gamma_map(
     return x
 
 
-def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
+def champagne(L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Champagne method based on our MATLAB codes
 
     Parameters
@@ -617,6 +635,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
+    n_orient : XXX
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -632,6 +651,7 @@ def champagne(L, y, cov=1.0, alpha=0.2, max_iter=1000, max_iter_reweighting=10):
     ----------
     XXX
     """
+    assert n_orient != 1, "Only 1 orientation is supported"
     n_sensors, n_sources = L.shape
     _, n_times = y.shape
     gammas = np.ones(n_sources)
