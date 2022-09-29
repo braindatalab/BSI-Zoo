@@ -380,11 +380,12 @@ def iterative_L2_typeII(
             return np.sqrt(groups_norm2(weights.copy(), n_orient))
 
         def w_mat(weights):
-            return np.diag(1.0 / np.repeat(g(weights), n_orient).ravel())
+            return 1.0 / np.repeat(g(weights), n_orient).ravel()
 
         def epsilon_update(L, weights, cov):
             noise_cov = cov  # extension of method by importing the noise covariance
-            proj_source_cov = (L @ w_mat(weights)) @ L_T
+            weights_ = w_mat(weights)
+            proj_source_cov = (L * weights_[np.newaxis, :]) @ L_T
             signal_cov = noise_cov + proj_source_cov
             sigmaY_inv = linalg.inv(signal_cov)
             # Full computation (slow):
@@ -392,7 +393,7 @@ def iterative_L2_typeII(
             #     w_mat(weights)
             #     - np.multiply(w_mat(weights ** 2), np.diag((L_T @ sigmaY_inv) @ L))
             # )
-            return weights - (weights ** 2) * ((L_T @ sigmaY_inv) * L_T).sum(axis=1)
+            return weights_ - (weights_ ** 2) * ((L_T @ sigmaY_inv) * L_T).sum(axis=1)
 
         def g_coef(coef):
             return groups_norm2(coef.copy(), n_orient)
