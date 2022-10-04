@@ -1,5 +1,5 @@
 from mne.utils import logger, warn
-from mne.inverse_sparse.mxne_optim import groups_norm2
+from mne.inverse_sparse.mxne_optim import groups_norm2, mixed_norm_solver, _mixed_norm_solver_bcd
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
 from scipy.sparse import spdiags
@@ -38,11 +38,19 @@ def _solve_reweighted_lasso(
 
     for _ in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
-        coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-        if y.ndim == 1:
-            x = coef_ * weights
+        n_orient=1
+        if n_orient > 1: 
+            coef_ = _mixed_norm_solver_bcd(L_w, y, alpha, max_iter=max_iter, n_orient=n_orient)
+            if y.ndim == 1:
+                x = coef_ * weights
+            else:
+                x = coef_ * weights[:, np.newaxis]            
         else:
-            x = coef_ * weights[:, np.newaxis]
+            coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
+            if y.ndim == 1:
+                x = coef_ * weights
+            else:
+                x = coef_ * weights[:, np.newaxis]
         weights = gprime(x)
 
     return x
