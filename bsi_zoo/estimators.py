@@ -39,7 +39,12 @@ def _solve_reweighted_lasso(
     for _ in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
         if n_orient > 1: 
-            coef_ = _mixed_norm_solver_bcd(L_w, y, alpha, max_iter=max_iter, n_orient=n_orient)
+            n_positions = L_w.shape[1] // n_orient
+            lc = np.empty(n_positions)
+            for j in range(n_positions):
+                L_j = L_w[:, (j * n_orient):((j + 1) * n_orient)]
+                lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
+            coef_ = _mixed_norm_solver_bcd(L_w, y, alpha, lipschitz_constant=lc, maxit=max_iter,  tol=1e-8, n_orient=n_orient)
             if y.ndim == 1:
                 x = coef_ * weights
             else:
@@ -87,7 +92,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     XXX
     """
-    assert n_orient != 1, "not implemented yet"
+    # assert n_orient != 1, "not implemented yet"
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -148,7 +153,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
+    # assert n_orient != 1, "not implemented yet"
 
     # XXX : cov is not used
     eps = np.finfo(float).eps
@@ -207,7 +212,7 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
+    # assert n_orient != 1, "not implemented yet"
     _, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -277,7 +282,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
+    # assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -371,7 +376,7 @@ def iterative_L2_typeII(
     ----------
     XXX
     """
-    assert n_orient != 1, "not implemented yet"
+    # assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
