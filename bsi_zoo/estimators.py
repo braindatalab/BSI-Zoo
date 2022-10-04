@@ -9,10 +9,10 @@ import numpy as np
 from sklearn import linear_model
 
 
-def groups_norm2(A, n_orient):
-    """Compute squared L2 norms of groups inplace."""
-    n_positions = A.shape[0] // n_orient
-    return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
+# def groups_norm2(A, n_orient):
+#     """Compute squared L2 norms of groups inplace."""
+#     n_positions = A.shape[0] // n_orient
+#     return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
