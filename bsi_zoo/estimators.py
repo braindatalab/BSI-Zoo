@@ -1,4 +1,5 @@
 from mne.utils import logger, warn
+from mne.inverse_sparse.mxne_optim import groups_norm2
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
 from scipy.sparse import spdiags
