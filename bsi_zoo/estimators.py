@@ -36,7 +36,7 @@ def _solve_reweighted_lasso(
 ):
     assert max_iter_reweighting > 0
 
-    for _ in range(max_iter_reweighting):
+    for i_reweight in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
         if n_orient > 1: 
             n_positions = L_w.shape[1] // n_orient
@@ -44,11 +44,15 @@ def _solve_reweighted_lasso(
             for j in range(n_positions):
                 L_j = L_w[:, (j * n_orient):((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
-            coef_ = _mixed_norm_solver_bcd(L_w, y, alpha, lipschitz_constant=lc, maxit=max_iter,  tol=1e-8, n_orient=n_orient)
+            coef_, active_set, _ = _mixed_norm_solver_bcd(
+                y, L_w, alpha, lipschitz_constant=lc, maxit=max_iter,
+                tol=1e-8, n_orient=n_orient, use_accel=False
+            )
+            x = np.zeros((L_w.shape[1], y.shape[1]))
             if y.ndim == 1:
-                x = coef_ * weights
+                x[active_set] = coef_ * weights[active_set]
             else:
-                x = coef_ * weights[:, np.newaxis]            
+                x[active_set] = coef_ * weights[active_set, np.newaxis]
         else:
             coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
             if y.ndim == 1:
