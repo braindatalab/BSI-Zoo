@@ -27,8 +27,10 @@ from bsi_zoo.estimators import (
     [
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
         # (iterative_L1, 0.01, 1e-1, 5e-1, "diag", {}),
-        (iterative_L2, 0.01, 1e-1, 5e-1, "diag", {}),
-        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),
+        (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
+        # (iterative_L2, 0.01, 1e-1, 5e-1, "diag", {}),
+        # (iterative_sqrt, 1e-3, 1e-1, 5e-1, "diag", {}),
+        # (iterative_sqrt, 0.01, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full", {}),
         (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full", {}),
         (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode": 1}),
@@ -54,18 +56,18 @@ def test_estimator(
         subject, orientation_type
     )  # setting leadfield paths
 
+    n_orient=1 if orientation_type == "fixed" else 3
+
     y, L, x, cov, noise = get_data(
         n_sensors=50,
         n_times=n_times,
         n_sources=200,
-        n_orient=3,  # XXX : maybe it should be 1
+        n_orient=n_orient,
         nnz=nnz,
         cov_type=cov_type,
         path_to_leadfield=path_to_leadfield,
         orientation_type=orientation_type,
     )
-
-    n_orient=1 if orientation_type == "fixed" else 3
 
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))

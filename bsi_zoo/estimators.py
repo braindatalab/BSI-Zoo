@@ -226,8 +226,8 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     def gprime(w):
         return 2.0 * np.repeat(g(w), n_orient).ravel()
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
-    alpha = alpha * alpha_max
+    # alpha_max = abs(L.T.dot(y)).max() / len(L)
+    # alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
         L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
