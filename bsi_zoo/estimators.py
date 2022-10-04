@@ -32,13 +32,12 @@ def _solve_lasso(Lw, y, alpha, max_iter):
 
 
 def _solve_reweighted_lasso(
-    L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
 ):
     assert max_iter_reweighting > 0
 
     for _ in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
-        n_orient=1
         if n_orient > 1: 
             coef_ = _mixed_norm_solver_bcd(L_w, y, alpha, max_iter=max_iter, n_orient=n_orient)
             if y.ndim == 1:
@@ -103,7 +102,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -166,7 +165,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -222,7 +221,7 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -313,7 +312,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
         # return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -414,7 +413,7 @@ def iterative_L2_typeII(
         return gprime_coef(coef) + epsilon_update(L, weights, cov)
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x

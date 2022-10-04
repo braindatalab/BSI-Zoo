@@ -64,7 +64,7 @@ def test_estimator(
         orientation_type=orientation_type,
     )
 
-    n_orient = 1 if orientation_type == "fixed" else 3
+    n_orient=1 if orientation_type == "fixed" else 3
 
     if cov_type == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
