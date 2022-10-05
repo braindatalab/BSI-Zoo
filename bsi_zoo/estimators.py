@@ -57,7 +57,6 @@ def _solve_reweighted_lasso(
             if y.ndim == 1:
                 x[mask] = coef_ * weights
             else:
-                # x[mask] = coef_ * weights[:, np.newaxis]
                 x[mask] = coef_ * weights[mask, np.newaxis]
         weights = gprime(x)
 
@@ -66,6 +65,7 @@ def _solve_reweighted_lasso(
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     Which in the case of iterative L1, it boils down to::
@@ -121,6 +121,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
 
 def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L2 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     Which in the case of iterative L2, g(x_i) and w_i are defined as follows::
@@ -129,6 +130,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -208,10 +210,12 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+
     References
     ----------
     TODO
@@ -329,6 +333,7 @@ def iterative_L2_typeII(
     L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
 ):
     """Iterative Type-II estimator with L_2 regularizer.
+
     The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
     Which in the case of iterative L2 Type-II , g_SBl(x) and w_i are define
@@ -341,6 +346,7 @@ def iterative_L2_typeII(
         hat{W} = diag(W)^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Notes
     -----
     Please note that lambda models the noise variance and it is a
@@ -352,6 +358,7 @@ def iterative_L2_typeII(
     w_i^(k+1) <-- [(x_i^(k))^2+epsilon^(k)]
     where
     epsilon^(k) = (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -369,11 +376,13 @@ def iterative_L2_typeII(
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     x : array, shape (n_sources,) or (n_sources, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     XXX
