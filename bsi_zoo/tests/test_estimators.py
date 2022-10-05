@@ -25,9 +25,7 @@ from bsi_zoo.estimators import (
     "solver,alpha,rtol,atol,cov_type,extra_params",
     [
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
-        # (iterative_L1, 0.01, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
-        # (iterative_L2, 0.01, 1e-1, 5e-1, "diag", {}),
         # (iterative_sqrt, 1e-3, 1e-1, 5e-1, "diag", {}),
         # (iterative_sqrt, 0.01, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full", {}),

@@ -9,12 +9,6 @@ import numpy as np
 from sklearn import linear_model
 
 
-# def groups_norm2(A, n_orient):
-#     """Compute squared L2 norms of groups inplace."""
-#     n_positions = A.shape[0] // n_orient
-#     return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
-
-
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
@@ -36,7 +30,7 @@ def _solve_reweighted_lasso(
 ):
     assert max_iter_reweighting > 0
 
-    for i_reweight in range(max_iter_reweighting):
+    for _ in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
         if n_orient > 1:
             n_positions = L_w.shape[1] // n_orient
@@ -73,6 +67,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     Iterative L1::
         g(x_i) = log(|x_i| + epsilon)
         w_i^(k+1) <-- [|x_i^(k)|+epsilon]
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -87,16 +82,17 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     XXX
     """
-    # assert n_orient != 1, "not implemented yet"
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -157,8 +153,6 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    # assert n_orient != 1, "not implemented yet"
-
     # XXX : cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
@@ -216,7 +210,6 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     ----------
     TODO
     """
-    # assert n_orient != 1, "not implemented yet"
     _, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -286,7 +279,6 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
     ----------
     TODO
     """
-    # assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -380,7 +372,6 @@ def iterative_L2_typeII(
     ----------
     XXX
     """
-    # assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
