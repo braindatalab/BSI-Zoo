@@ -1,4 +1,5 @@
 from mne.utils import logger, warn
+from mne.inverse_sparse.mxne_optim import groups_norm2, _mixed_norm_solver_bcd
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
 from scipy.sparse import spdiags
@@ -6,12 +7,6 @@ from scipy.sparse import spdiags
 from scipy import linalg
 import numpy as np
 from sklearn import linear_model
-
-
-def groups_norm2(A, n_orient):
-    """Compute squared L2 norms of groups inplace."""
-    n_positions = A.shape[0] // n_orient
-    return np.sum(np.power(A, 2, A).reshape(n_positions, -1), axis=1)
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
@@ -31,17 +26,38 @@ def _solve_lasso(Lw, y, alpha, max_iter):
 
 
 def _solve_reweighted_lasso(
-    L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+    L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
 ):
     assert max_iter_reweighting > 0
 
     for _ in range(max_iter_reweighting):
-        L_w = L * weights[np.newaxis, :]
-        coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
-        if y.ndim == 1:
-            x = coef_ * weights
+        mask = weights > 0  # ignore dipoles with zero weights
+        L_w = L[:, mask] * weights[np.newaxis, mask]
+        assert np.isnan(weights).sum() == 0
+        if n_orient > 1:
+            n_positions = L_w.shape[1] // n_orient
+            lc = np.empty(n_positions)
+            for j in range(n_positions):
+                L_j = L_w[:, (j * n_orient):((j + 1) * n_orient)]
+                lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
+            coef_, active_set, _ = _mixed_norm_solver_bcd(
+                y, L_w, alpha, lipschitz_constant=lc, maxit=max_iter,
+                tol=1e-8, n_orient=n_orient, use_accel=False
+            )
+            x = np.zeros((L.shape[1], y.shape[1]))
+            mask[mask] = active_set
+            if y.ndim == 1:
+                x[mask] = coef_ * weights[mask]
+            else:
+                x[mask] = coef_ * weights[mask, np.newaxis]
+            assert np.isnan(x).sum() == 0
         else:
-            x = coef_ * weights[:, np.newaxis]
+            coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
+            x = np.zeros((L.shape[1], y.shape[1]))
+            if y.ndim == 1:
+                x[mask] = coef_ * weights
+            else:
+                x[mask] = coef_ * weights[mask, np.newaxis]
         weights = gprime(x)
 
     return x
@@ -49,6 +65,7 @@ def _solve_reweighted_lasso(
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     Which in the case of iterative L1, it boils down to::
@@ -56,6 +73,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     Iterative L1::
         g(x_i) = log(|x_i| + epsilon)
         w_i^(k+1) <-- [|x_i^(k)|+epsilon]
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -70,16 +88,17 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     XXX
     """
-    assert n_orient != 1, "not implemented yet"
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -94,7 +113,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -102,6 +121,7 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
 
 def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L2 regularizer.
+
     The optimization objective for iterative estimators in general is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
     Which in the case of iterative L2, g(x_i) and w_i are defined as follows::
@@ -110,6 +130,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -140,8 +161,6 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
-
     # XXX : cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
@@ -157,7 +176,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -191,15 +210,16 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     y : array, shape (n_sensors,) or (n_sensors, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost function formula).
+
     References
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
     _, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -213,7 +233,7 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -269,7 +289,6 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
     ----------
     TODO
     """
-    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -304,7 +323,7 @@ def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_ite
         # return 1.0 / (np.sqrt(np.diag((L_T @ sigmaY_inv) @ L)))
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
@@ -314,6 +333,7 @@ def iterative_L2_typeII(
     L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
 ):
     """Iterative Type-II estimator with L_2 regularizer.
+
     The optimization objective for iterative Type-II methods is::
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * g_SBl(x)
     Which in the case of iterative L2 Type-II , g_SBl(x) and w_i are define
@@ -326,6 +346,7 @@ def iterative_L2_typeII(
         hat{W} = diag(W)^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
     Notes
     -----
     Please note that lambda models the noise variance and it is a
@@ -337,6 +358,7 @@ def iterative_L2_typeII(
     w_i^(k+1) <-- [(x_i^(k))^2+epsilon^(k)]
     where
     epsilon^(k) = (w_i^(k))^(-1) - (w_i^(k))^(-2) * L_i^T*(lambda*Id + L*hat{W^(k)}*L^T)^(-1)*L_i
+
     Parameters
     ----------
     L : array, shape (n_sensors, n_sources)
@@ -354,16 +376,17 @@ def iterative_L2_typeII(
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
         Maximum number of reweighting steps i.e outer loop iterations
+
     Returns
     -------
     x : array, shape (n_sources,) or (n_sources, n_times)
         Parameter vector, e.g., source vector in the context of BSI (x in the cost
         function formula).
+
     References
     ----------
     XXX
     """
-    assert n_orient != 1, "not implemented yet"
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
@@ -405,7 +428,7 @@ def iterative_L2_typeII(
         return gprime_coef(coef) + epsilon_update(L, weights, cov)
 
     x = _solve_reweighted_lasso(
-        L, y, alpha, weights, max_iter, max_iter_reweighting, gprime
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
