@@ -57,7 +57,8 @@ def _solve_reweighted_lasso(
             if y.ndim == 1:
                 x[mask] = coef_ * weights
             else:
-                x[mask] = coef_ * weights[:, np.newaxis]
+                # x[mask] = coef_ * weights[:, np.newaxis]
+                x[mask] = coef_ * weights[mask, np.newaxis]
         weights = gprime(x)
 
     return x
