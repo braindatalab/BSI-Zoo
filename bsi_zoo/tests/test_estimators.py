@@ -8,7 +8,7 @@ from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
-    # iterative_sqrt,
+    iterative_sqrt,
     iterative_L1_typeII,
     iterative_L2_typeII,
     gamma_map,
@@ -26,8 +26,7 @@ from bsi_zoo.estimators import (
     [
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
-        # (iterative_sqrt, 1e-3, 1e-1, 5e-1, "diag", {}),
-        # (iterative_sqrt, 0.01, 1e-1, 5e-1, "diag", {}),
+        (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 0.1, 1e-1, 5e-1, "full", {}),
         (iterative_L2_typeII, 0.1, 1e-1, 5e-1, "full", {}),
         (gamma_map, 0.2, 1e-1, 5e-1, "full", {"update_mode": 1}),

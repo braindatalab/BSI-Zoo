@@ -31,7 +31,9 @@ def _solve_reweighted_lasso(
     assert max_iter_reweighting > 0
 
     for _ in range(max_iter_reweighting):
-        L_w = L * weights[np.newaxis, :]
+        mask = weights > 0  # ignore dipoles with zero weights
+        L_w = L[:, mask] * weights[np.newaxis, mask]
+        assert np.isnan(weights).sum() == 0
         if n_orient > 1:
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
@@ -42,17 +44,20 @@ def _solve_reweighted_lasso(
                 y, L_w, alpha, lipschitz_constant=lc, maxit=max_iter,
                 tol=1e-8, n_orient=n_orient, use_accel=False
             )
-            x = np.zeros((L_w.shape[1], y.shape[1]))
+            x = np.zeros((L.shape[1], y.shape[1]))
+            mask[mask] = active_set
             if y.ndim == 1:
-                x[active_set] = coef_ * weights[active_set]
+                x[mask] = coef_ * weights[mask]
             else:
-                x[active_set] = coef_ * weights[active_set, np.newaxis]
+                x[mask] = coef_ * weights[mask, np.newaxis]
+            assert np.isnan(x).sum() == 0
         else:
             coef_ = _solve_lasso(L_w, y, alpha, max_iter=max_iter)
+            x = np.zeros((L.shape[1], y.shape[1]))
             if y.ndim == 1:
-                x = coef_ * weights
+                x[mask] = coef_ * weights
             else:
-                x = coef_ * weights[:, np.newaxis]
+                x[mask] = coef_ * weights[:, np.newaxis]
         weights = gprime(x)
 
     return x
@@ -219,8 +224,8 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     def gprime(w):
         return 2.0 * np.repeat(g(w), n_orient).ravel()
 
-    # alpha_max = abs(L.T.dot(y)).max() / len(L)
-    # alpha = alpha * alpha_max
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
         L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
