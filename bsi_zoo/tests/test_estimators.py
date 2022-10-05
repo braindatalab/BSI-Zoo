@@ -15,7 +15,6 @@ from bsi_zoo.estimators import (
 )
 
 
-# TODO: make the iterative type-II methods more efficient
 @pytest.mark.parametrize("n_times", [5])
 # @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
 @pytest.mark.parametrize("orientation_type", ["free"])
