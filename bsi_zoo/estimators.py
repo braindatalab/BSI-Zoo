@@ -1,5 +1,5 @@
 from mne.utils import logger, warn
-from mne.inverse_sparse.mxne_optim import groups_norm2, mixed_norm_solver, _mixed_norm_solver_bcd
+from mne.inverse_sparse.mxne_optim import groups_norm2, _mixed_norm_solver_bcd
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
 from scipy.sparse import spdiags
@@ -38,7 +38,7 @@ def _solve_reweighted_lasso(
 
     for i_reweight in range(max_iter_reweighting):
         L_w = L * weights[np.newaxis, :]
-        if n_orient > 1: 
+        if n_orient > 1:
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):

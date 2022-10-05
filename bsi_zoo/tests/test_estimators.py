@@ -8,7 +8,7 @@ from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
-    iterative_sqrt,
+    # iterative_sqrt,
     iterative_L1_typeII,
     iterative_L2_typeII,
     gamma_map,
@@ -55,7 +55,7 @@ def test_estimator(
         subject, orientation_type
     )  # setting leadfield paths
 
-    n_orient=1 if orientation_type == "fixed" else 3
+    n_orient = 1 if orientation_type == "fixed" else 3
 
     y, L, x, cov, noise = get_data(
         n_sensors=50,
