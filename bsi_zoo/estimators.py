@@ -86,7 +86,7 @@ class Solver(BaseEstimator, ClassifierMixin):
         else:
             self.coeff_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
 
-        return self.coeff_
+        return self.coef_
 
 
 def estimator(solver, L, y, cov=None):
