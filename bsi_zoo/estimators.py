@@ -13,6 +13,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 import warnings
 warnings.filterwarnings("ignore")
 
+
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
