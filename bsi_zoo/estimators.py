@@ -7,6 +7,8 @@ from scipy.sparse import spdiags
 from scipy import linalg
 import numpy as np
 from sklearn import linear_model
+from sklearn.model_selection import GridSearchCV
+from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
