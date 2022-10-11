@@ -10,6 +10,8 @@ from sklearn import linear_model
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin
 
+import warnings
+warnings.filterwarnings("ignore")
 
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
