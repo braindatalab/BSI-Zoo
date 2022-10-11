@@ -84,6 +84,24 @@ class Solver(BaseEstimator, ClassifierMixin):
         return self.coeff_
 
 
+def estimator(solver, L, y, cov=None):
+    alphas = np.linspace(0.01, 5, 20)
+    clf = GridSearchCV(
+        estimator=Solver(solver, cov=cov),
+        param_grid=dict(alpha=alphas),
+        scoring="neg_mean_squared_error",
+        cv=5,
+        n_jobs=-1,
+    )
+    clf.fit(L, y)
+    if cov is None:
+        x = solver(L, y, alpha=clf.best_estimator_.alpha)
+    else:
+        x = solver(L, y, cov, alpha=clf.best_estimator_.alpha)
+
+    return x
+
+
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
 
