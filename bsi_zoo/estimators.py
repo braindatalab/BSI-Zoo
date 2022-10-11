@@ -63,6 +63,27 @@ def _solve_reweighted_lasso(
     return x
 
 
+class Solver(BaseEstimator, ClassifierMixin):
+    def __init__(self, solver, alpha=None, cov=None):
+        self.solver = solver
+        self.alpha = alpha
+        self.cov = cov
+
+    def fit(self, L, y):
+        self.L_ = L
+        self.y_ = y
+
+        return self
+
+    def predict(self, y):
+        if self.cov is None:
+            self.coeff_ = self.solver(self.L_, y, alpha=self.alpha)
+        else:
+            self.coeff_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+
+        return self.coeff_
+
+
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
 
