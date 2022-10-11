@@ -82,9 +82,9 @@ class Solver(BaseEstimator, ClassifierMixin):
 
     def predict(self, y):
         if self.cov is None:
-            self.coeff_ = self.solver(self.L_, y, alpha=self.alpha)
+            self.coef_ = self.solver(self.L_, y, alpha=self.alpha)
         else:
-            self.coeff_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+            self.coef_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
 
         return self.coef_
 
