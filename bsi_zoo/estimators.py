@@ -90,7 +90,7 @@ class Solver(BaseEstimator, ClassifierMixin):
 
 
 def run_spatial_cv(solver, L, y, cov=None, n_orient=1, **extra_params):
-    alphas = np.linspace(0.01, 5, 20)
+    alphas = np.linspace(0.01, 1.5, 20)
     clf = GridSearchCV(
         estimator=Solver(solver, cov=cov),
         param_grid=dict(alpha=alphas),
