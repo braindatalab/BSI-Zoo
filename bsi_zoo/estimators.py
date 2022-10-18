@@ -89,22 +89,53 @@ class Solver(BaseEstimator, ClassifierMixin):
         return self.coef_
 
 
-def run_spatial_cv(solver, L, y, cov=None, n_orient=1, **extra_params):
-    alphas = np.linspace(0.01, 1.5, 20)
-    clf = GridSearchCV(
-        estimator=Solver(solver, cov=cov),
-        param_grid=dict(alpha=alphas),
-        scoring="neg_mean_squared_error",
-        cv=5,
-        n_jobs=-1,
-    )
-    clf.fit(L, y)
-    if cov is None:
-        x = solver(L, y, alpha=clf.best_estimator_.alpha)
-    else:
-        x = solver(L, y, cov, alpha=clf.best_estimator_.alpha)
+class Spatial_CV_Solver(BaseEstimator, ClassifierMixin):
+    def __init__(self, solver, alpha=None, alphas = np.linspace(0.01, 1.5, 20), cov=None):
+        self.solver = solver
+        self.alpha = alpha
+        self.alphas = alphas
+        self.cov = cov
 
-    return x
+    def fit(self, L, y):
+        self.L_ = L
+        self.y_ = y
+        
+        clf = GridSearchCV(
+            estimator=Solver(self.solver, cov=self.cov),
+            param_grid=dict(alpha=self.alphas),
+            scoring="neg_mean_squared_error",
+            cv=5,
+            n_jobs=-1,
+        )
+        clf.fit(L, y)
+        self.alpha = clf.best_estimator_.alpha
+        return self
+
+    def predict(self, y):
+        if self.cov is None:
+            self.coef_ = self.solver(self.L_, y, alpha=self.alpha)
+        else:
+            self.coef_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+
+        return self.coef_
+
+
+# def run_spatial_cv(solver, L, y, cov=None, n_orient=1, **extra_params):
+#     alphas = np.linspace(0.01, 1.5, 20)
+#     clf = GridSearchCV(
+#         estimator=Solver(solver, cov=cov),
+#         param_grid=dict(alpha=alphas),
+#         scoring="neg_mean_squared_error",
+#         cv=5,
+#         n_jobs=-1,
+#     )
+#     clf.fit(L, y)
+#     if cov is None:
+#         x = solver(L, y, alpha=clf.best_estimator_.alpha)
+#     else:
+#         x = solver(L, y, cov, alpha=clf.best_estimator_.alpha)
+
+#     return x
 
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
