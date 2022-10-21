@@ -12,6 +12,7 @@ from bsi_zoo.estimators import (
     iterative_L1_typeII,
     iterative_L2_typeII,
     gamma_map,
+    Solver,
 )
 
 
@@ -21,7 +22,7 @@ from bsi_zoo.estimators import (
 # @pytest.mark.parametrize("subject", [None, "CC120166"])
 @pytest.mark.parametrize("subject", [None])
 @pytest.mark.parametrize(
-    "solver,alpha,rtol,atol,cov_type,extra_params",
+    "estimator,alpha,rtol,atol,cov_type,extra_params",
     [
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
@@ -35,7 +36,7 @@ from bsi_zoo.estimators import (
 )
 def test_estimator(
     n_times,
-    solver,
+    estimator,
     alpha,
     rtol,
     atol,
@@ -68,9 +69,15 @@ def test_estimator(
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-        x_hat = solver(L, y, alpha=alpha, n_orient=n_orient, **extra_params)
-    else:
-        x_hat = solver(L, y, cov, alpha=alpha, n_orient=n_orient, **extra_params)
+    solver = Solver(
+        estimator,
+        alpha=alpha,
+        cov_type=cov_type,
+        cov=cov,
+        n_orient=n_orient,
+        extra_params=extra_params,
+    ).fit(L=L, y=y)
+    x_hat = solver.predict(y)
 
     if orientation_type == "free":
         x_hat = x_hat.reshape(x.shape)

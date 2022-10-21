@@ -11,6 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -43,11 +44,17 @@ def _solve_reweighted_lasso(
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):
-                L_j = L_w[:, (j * n_orient):((j + 1) * n_orient)]
+                L_j = L_w[:, (j * n_orient) : ((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
             coef_, active_set, _ = _mixed_norm_solver_bcd(
-                y, L_w, alpha, lipschitz_constant=lc, maxit=max_iter,
-                tol=1e-8, n_orient=n_orient, use_accel=False
+                y,
+                L_w,
+                alpha,
+                lipschitz_constant=lc,
+                maxit=max_iter,
+                tol=1e-8,
+                n_orient=n_orient,
+                # use_accel=False,
             )
             x = np.zeros((L.shape[1], y.shape[1]))
             mask[mask] = active_set
@@ -69,10 +76,13 @@ def _solve_reweighted_lasso(
 
 
 class Solver(BaseEstimator, ClassifierMixin):
-    def __init__(self, solver, alpha=None, cov=None):
+    def __init__(self, solver, alpha, cov_type, cov, n_orient, extra_params={}):
         self.solver = solver
         self.alpha = alpha
         self.cov = cov
+        self.cov_type = cov_type
+        self.n_orient = n_orient
+        self.extra_params = extra_params
 
     def fit(self, L, y):
         self.L_ = L
@@ -81,18 +91,30 @@ class Solver(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, y):
-        if self.cov is None:
-            self.coef_ = self.solver(self.L_, y, alpha=self.alpha)
+        if self.cov_type == "diag":
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                alpha=self.alpha,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
         else:
-            self.coef_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                self.cov,
+                alpha=self.alpha,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
 
         return self.coef_
 
 
 class SpatialCVSolver(BaseEstimator, ClassifierMixin):
-    def __init__(self, solver, alpha=None, alphas = np.linspace(1.4, 0.1, 20), cov=None):
+    def __init__(self, solver, alphas=np.linspace(1.4, 0.1, 20), cov=None):
         self.solver = solver
-        self.alpha = alpha
         self.alphas = alphas
         self.cov = cov
 
@@ -314,7 +336,9 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     return x
 
 
-def iterative_L1_typeII(L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
+def iterative_L1_typeII(
+    L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
+):
     """Iterative Type-II estimator with L_1 regularizer.
 
     The optimization objective for iterative Type-II methods is::
@@ -718,7 +742,9 @@ def gamma_map(
     return x
 
 
-def champagne(L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
+def champagne(
+    L, y, cov=1.0, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
+):
     """Champagne method based on our MATLAB codes
 
     Parameters
