@@ -113,14 +113,29 @@ class Solver(BaseEstimator, ClassifierMixin):
 
 
 class SpatialCVSolver(BaseEstimator, ClassifierMixin):
-    def __init__(self, solver, alphas=np.linspace(1.4, 0.1, 20), cov=None):
+    def __init__(
+        self,
+        solver,
+        cov_type,
+        cov,
+        n_orient,
+        alphas=np.linspace(1.4, 0.1, 20),
+        extra_params={},
+    ):
         self.solver = solver
         self.alphas = alphas
         self.cov = cov
+        self.cov_type = cov_type
+        self.n_orient = n_orient
+        self.extra_params = extra_params
 
     def fit(self, L, y):
         self.L_ = L
         self.y_ = y
+
+        return self
+
+    def predict(self, y):
         clf = GridSearchCV(
             estimator=Solver(self.solver, cov=self.cov),
             param_grid=dict(alpha=self.alphas),
@@ -128,36 +143,28 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
             cv=5,
             n_jobs=-1,
         )
-        clf.fit(L, y)
+        clf.fit(self.L_, y)
         self.alpha = clf.best_estimator_.alpha
-        return self
 
-    def predict(self, y):
-        if self.cov is None:
-            self.coef_ = self.solver(self.L_, y, alpha=self.alpha)
+        if self.cov_type == "diag":
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                alpha=self.alpha,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
         else:
-            self.coef_ = self.solver(self.L_, y, self.cov, alpha=self.alpha)
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                self.cov,
+                alpha=self.alpha,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
 
         return self.coef_
-
-
-def run_spatial_cv(solver, L, y, cov=None, n_orient=1, **extra_params):
-    # alphas = np.linspace(0.01, 1.5, 20)
-    alphas = np.linspace(1.4, 0.1, 20)
-    clf = GridSearchCV(
-        estimator=Solver(solver, cov=cov),
-        param_grid=dict(alpha=alphas),
-        scoring="neg_mean_squared_error",
-        cv=5,
-        n_jobs=-1,
-    )
-    clf.fit(L, y)
-    if cov is None:
-        x = solver(L, y, alpha=clf.best_estimator_.alpha)
-    else:
-        x = solver(L, y, cov, alpha=clf.best_estimator_.alpha)
-
-    return x
 
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
