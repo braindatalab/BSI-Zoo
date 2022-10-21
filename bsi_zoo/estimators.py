@@ -89,7 +89,7 @@ class Solver(BaseEstimator, ClassifierMixin):
         return self.coef_
 
 
-class Spatial_CV_Solver(BaseEstimator, ClassifierMixin):
+class SpatialCVSolver(BaseEstimator, ClassifierMixin):
     def __init__(self, solver, alpha=None, alphas = np.linspace(1.4, 0.1, 20), cov=None):
         self.solver = solver
         self.alpha = alpha
