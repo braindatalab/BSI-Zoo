@@ -6,7 +6,6 @@ from bsi_zoo.config import get_leadfield_path, get_fwd_fname
 from bsi_zoo.data_generator import get_data
 
 from bsi_zoo.estimators import (
-    run_spatial_cv,
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
