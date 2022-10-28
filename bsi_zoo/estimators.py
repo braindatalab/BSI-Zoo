@@ -18,13 +18,13 @@ warnings.filterwarnings("ignore")
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
-            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+            max_iter=max_iter, fit_intercept=False, alpha=alpha
         )
         x = model.fit(Lw, y).coef_.copy()
         x = x.T
     else:
         model = linear_model.MultiTaskLasso(
-            max_iter=max_iter, normalize=False, fit_intercept=False, alpha=alpha
+            max_iter=max_iter, fit_intercept=False, alpha=alpha
         )
         x = model.fit(Lw, y).coef_.copy()
         x = x.T
@@ -90,9 +90,9 @@ class Solver(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def predict(self, y):
+    def _get_coef(self, y):
         if self.cov_type == "diag":
-            self.coef_ = self.solver(
+            coef = self.solver(
                 self.L_,
                 y,
                 alpha=self.alpha,
@@ -100,7 +100,7 @@ class Solver(BaseEstimator, ClassifierMixin):
                 **self.extra_params
             )
         else:
-            self.coef_ = self.solver(
+            coef = self.solver(
                 self.L_,
                 y,
                 self.cov,
@@ -108,8 +108,23 @@ class Solver(BaseEstimator, ClassifierMixin):
                 n_orient=self.n_orient,
                 **self.extra_params
             )
+        return coef
 
-        return self.coef_
+    def predict(self, y):
+        return self._get_coef(y)
+
+
+class SpatialSolver(Solver):
+    def fit(self, X, y):
+        self.L_ = X
+        self.coef_ = self._get_coef(y)
+        return self
+
+    def predict(self, X):
+        return X @ self.coef_
+
+    def score(self, X, y):
+        return -np.mean(self.predict(X) - y) ** 2
 
 
 class SpatialCVSolver(BaseEstimator, ClassifierMixin):
@@ -120,14 +135,18 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
         cov,
         n_orient,
         alphas=np.linspace(1.4, 0.1, 20),
+        cv=5,
         extra_params={},
+        n_jobs=1,
     ):
         self.solver = solver
         self.alphas = alphas
         self.cov = cov
         self.cov_type = cov_type
         self.n_orient = n_orient
+        self.cv = cv
         self.extra_params = extra_params
+        self.n_jobs = n_jobs
 
     def fit(self, L, y):
         self.L_ = L
@@ -136,21 +155,28 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, y):
-        clf = GridSearchCV(
-            estimator=Solver(self.solver, cov=self.cov),
+        gs = GridSearchCV(
+            estimator=SpatialSolver(
+                self.solver,
+                cov=self.cov,
+                alpha=None,
+                cov_type=self.cov_type,
+                n_orient=self.n_orient,
+            ),
             param_grid=dict(alpha=self.alphas),
             scoring="neg_mean_squared_error",
-            cv=5,
-            n_jobs=-1,
+            cv=self.cv,
+            n_jobs=self.n_jobs,
         )
-        clf.fit(self.L_, y)
-        self.alpha = clf.best_estimator_.alpha
+        gs.fit(self.L_, y)
+        self.grid_search_ = gs
+        self.alpha_ = gs.best_estimator_.alpha
 
         if self.cov_type == "diag":
             self.coef_ = self.solver(
                 self.L_,
                 y,
-                alpha=self.alpha,
+                alpha=self.alpha_,
                 n_orient=self.n_orient,
                 **self.extra_params
             )
@@ -159,7 +185,7 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
                 self.L_,
                 y,
                 self.cov,
-                alpha=self.alpha,
+                alpha=self.alpha_,
                 n_orient=self.n_orient,
                 **self.extra_params
             )
@@ -187,7 +213,8 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 1.0
-    n_orient : XXX
+    n_orient : int
+        Number of dipoles per location (typically 1 or 3).
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
