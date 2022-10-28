@@ -8,7 +8,8 @@ from scipy import linalg
 import numpy as np
 from sklearn import linear_model
 from sklearn.model_selection import GridSearchCV
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.model_selection import check_cv
 
 import warnings
 
@@ -171,6 +172,82 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
         gs.fit(self.L_, y)
         self.grid_search_ = gs
         self.alpha_ = gs.best_estimator_.alpha
+
+        if self.cov_type == "diag":
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                alpha=self.alpha_,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
+        else:
+            self.coef_ = self.solver(
+                self.L_,
+                y,
+                self.cov,
+                alpha=self.alpha_,
+                n_orient=self.n_orient,
+                **self.extra_params
+            )
+
+        return self.coef_
+
+
+class TemporalCVSolver(BaseEstimator, ClassifierMixin):
+    def __init__(
+        self,
+        solver,
+        cov_type,
+        cov,
+        n_orient,
+        alphas=np.linspace(1.4, 0.1, 20),
+        cv=2,
+        extra_params={},
+        n_jobs=1,
+    ):
+        self.solver = solver
+        self.alphas = alphas
+        self.cov = cov
+        self.cov_type = cov_type
+        self.n_orient = n_orient
+        self.cv = cv
+        self.extra_params = extra_params
+        self.n_jobs = n_jobs
+
+    def fit(self, L, y):
+        self.L_ = L
+        self.y_ = y
+
+        return self
+
+    def predict(self, y):
+        base_solver = SpatialSolver(
+            self.solver,
+            cov=self.cov,
+            alpha=None,
+            cov_type=self.cov_type,
+            n_orient=self.n_orient,
+        )
+
+        cv = check_cv(self.cv)
+        scores = []
+        for alpha in self.alphas:
+            solver = clone(base_solver)
+            solver.set_params(alpha=alpha)
+            this_scores = []
+            for train_idx, test_idx in cv.split(y.T):
+                solver.fit(self.L_, y[:, train_idx])
+                y_pred = self.L_ @ solver.coef_
+                # XXX this needs to be fixed with a type 2 metric
+                this_scores.append(
+                    np.mean((y_pred - y[:, test_idx]))
+                )
+            scores.append(
+                np.mean(this_scores)
+            )
+
+        self.alpha_ = self.alphas[np.argmax(scores)]
 
         if self.cov_type == "diag":
             self.coef_ = self.solver(

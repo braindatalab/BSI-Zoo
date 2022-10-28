@@ -5,33 +5,33 @@ import pytest
 
 from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import (
-    iterative_L1,
-    iterative_L2,
-    iterative_sqrt,
+    # iterative_L1,
+    # iterative_L2,
+    # iterative_sqrt,
     # iterative_L1_typeII,
     # iterative_L2_typeII,
     gamma_map,
-    SpatialCVSolver,
+    TemporalCVSolver,
 )
 
 
-@pytest.mark.parametrize("n_times", [5])
+@pytest.mark.parametrize("n_times", [100])
 @pytest.mark.parametrize("orientation_type", ["fixed", "free"])
 @pytest.mark.parametrize("nnz", [3])
 @pytest.mark.parametrize(
     "estimator,rtol,atol,cov_type,extra_params",
     [
-        (iterative_L1, 1e-1, 5e-1, "diag", {}),
-        (iterative_L2, 1e-1, 5e-1, "diag", {}),
-        (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
+        # (iterative_L1, 1e-1, 5e-1, "diag", {}),
+        # (iterative_L2, 1e-1, 5e-1, "diag", {}),
+        # (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
         # (iterative_L1_typeII, 1e-1, 5e-1, "full", {}),
         # (iterative_L2_typeII, 1e-1, 5e-1, "full", {}),
         (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 1}),
-        (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 2}),
-        (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 3}),
+        # (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 2}),
+        # (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 3}),
     ],
 )
-def test_run_spatial_cv(
+def test_run_temporal_cv(
     n_times,
     estimator,
     rtol,
@@ -64,13 +64,13 @@ def test_run_spatial_cv(
     else:
         alphas = [0.1, 0.01, 0.001]
 
-    solver = SpatialCVSolver(
+    solver = TemporalCVSolver(
         estimator,
         alphas=alphas,
         cov_type=cov_type,
         cov=cov,
         n_orient=n_orient,
-        cv=3,
+        cv=2,
         extra_params=extra_params,
     ).fit(L=L, y=y)
     x_hat = solver.predict(y)
