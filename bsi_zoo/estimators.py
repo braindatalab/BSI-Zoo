@@ -45,7 +45,7 @@ def _solve_reweighted_lasso(
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):
-                L_j = L_w[:, (j * n_orient): ((j + 1) * n_orient)]
+                L_j = L_w[:, (j * n_orient) : ((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
             coef_, active_set, _ = _mixed_norm_solver_bcd(
                 y,
@@ -193,6 +193,9 @@ class SpatialCVSolver(BaseEstimator, ClassifierMixin):
 
         return self.coef_
 
+    def get_alpha(self):
+        return self.alpha_
+
 
 class TemporalCVSolver(BaseEstimator, ClassifierMixin):
     def __init__(
@@ -240,12 +243,8 @@ class TemporalCVSolver(BaseEstimator, ClassifierMixin):
                 solver.fit(self.L_, y[:, train_idx])
                 y_pred = self.L_ @ solver.coef_
                 # XXX this needs to be fixed with a type 2 metric
-                this_scores.append(
-                    np.mean((y_pred - y[:, test_idx]))
-                )
-            scores.append(
-                np.mean(this_scores)
-            )
+                this_scores.append(np.mean((y_pred - y[:, test_idx])))
+            scores.append(np.mean(this_scores))
 
         self.alpha_ = self.alphas[np.argmax(scores)]
 

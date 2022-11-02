@@ -12,10 +12,11 @@ from bsi_zoo.data_generator import get_data
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
-    iterative_L1_typeII,
-    iterative_L2_typeII,
+    # iterative_L1_typeII,
+    # iterative_L2_typeII,
     gamma_map,
     iterative_sqrt,
+    SpatialCVSolver,
 )
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
@@ -30,6 +31,8 @@ def _run_estimator(
     seed,
     estimator_name,
     memory,
+    do_spatial_cv,
+    extra_params={},
 ):
     print("Benchmarking this data...")
     print(this_data_args)
@@ -37,13 +40,25 @@ def _run_estimator(
     y, L, x, cov, _ = memory.cache(get_data)(**this_data_args, seed=seed)
 
     # estimate x_hat
-    if this_data_args["cov_type"] == "diag":
-        whitener = linalg.inv(linalg.sqrtm(cov))
-        L = whitener @ L
-        y = whitener @ y
-        x_hat = estimator(L, y, **this_estimator_args)
+    if do_spatial_cv:
+        estimator_cv = SpatialCVSolver(
+            estimator,
+            alphas=this_estimator_args["alpha"],
+            cov_type=this_data_args["cov_type"],
+            cov=cov,
+            n_orient=this_data_args["n_orient"],
+            cv=3,
+            extra_params=extra_params,
+        ).fit(L=L, y=y)
+        x_hat = estimator_cv.predict(y)
     else:
-        x_hat = estimator(L, y, cov, **this_estimator_args)
+        if this_data_args["cov_type"] == "diag":
+            whitener = linalg.inv(linalg.sqrtm(cov))
+            L = whitener @ L
+            y = whitener @ y
+            x_hat = estimator(L, y, **this_estimator_args)
+        else:
+            x_hat = estimator(L, y, cov, **this_estimator_args)
 
     if this_data_args["orientation_type"] == "free":
         x_hat = x_hat.reshape(x.shape)
@@ -67,6 +82,8 @@ def _run_estimator(
         this_results[metric.__name__] = metric_score
     this_results.update(this_data_args)
     this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
+    if do_spatial_cv:
+        this_results.update({"estimator__alpha_cv": estimator_cv.get_alpha()})
 
     return this_results
 
@@ -82,6 +99,7 @@ class Benchmark:
         random_state=None,
         memory=None,
         n_jobs=1,
+        do_spatial_cv=False,
     ) -> None:
         self.estimator = estimator
         self.subject = subject
@@ -91,6 +109,7 @@ class Benchmark:
         self.random_state = random_state
         self.memory = memory if isinstance(memory, Memory) else Memory(memory)
         self.n_jobs = n_jobs
+        self.do_spatial_cv = do_spatial_cv
 
     def run(self, nruns=2):
         rng = check_random_state(self.random_state)
@@ -98,21 +117,43 @@ class Benchmark:
 
         estimator = self.memory.cache(self.estimator)
 
-        results = Parallel(n_jobs=self.n_jobs)(
-            delayed(_run_estimator)(
-                self.subject,
-                estimator,
-                self.metrics,
-                this_data_args,
-                this_estimator_args,
-                seed,
-                estimator_name=self.estimator.__name__,
-                memory=self.memory,
+        if do_spatial_cv:
+            # dont make param grid for estimator args
+            results = Parallel(n_jobs=self.n_jobs)(
+                delayed(_run_estimator)(
+                    self.subject,
+                    estimator,
+                    self.metrics,
+                    this_data_args,
+                    self.estimator_args,
+                    seed,
+                    estimator_name=self.estimator.__name__,
+                    memory=self.memory,
+                    do_spatial_cv=self.do_spatial_cv,
+                )
+                for this_data_args, seed in itertools.product(
+                    ParameterGrid(self.data_args), seeds
+                )
             )
-            for this_data_args, seed, this_estimator_args in itertools.product(
-                ParameterGrid(self.data_args), seeds, ParameterGrid(self.estimator_args)
+        else:
+            results = Parallel(n_jobs=self.n_jobs)(
+                delayed(_run_estimator)(
+                    self.subject,
+                    estimator,
+                    self.metrics,
+                    this_data_args,
+                    this_estimator_args,
+                    seed,
+                    estimator_name=self.estimator.__name__,
+                    memory=self.memory,
+                    do_spatial_cv=self.do_spatial_cv,
+                )
+                for this_data_args, seed, this_estimator_args in itertools.product(
+                    ParameterGrid(self.data_args),
+                    seeds,
+                    ParameterGrid(self.estimator_args),
+                )
             )
-        )
 
         results = pd.DataFrame(results)
         return results
@@ -120,6 +161,7 @@ class Benchmark:
 
 if __name__ == "__main__":
     n_jobs = 10
+    do_spatial_cv = True
     metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
     nnzs = [1, 2, 3, 5]
     estimator_alphas = [
@@ -165,8 +207,8 @@ if __name__ == "__main__":
             (iterative_L1, data_args_I, {"alpha": estimator_alphas}),
             (iterative_L2, data_args_I, {"alpha": estimator_alphas}),
             (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}),
-            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
-            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
+            # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
+            # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
             (gamma_map, data_args_II, {"alpha": estimator_alphas}),
         ]
 
@@ -181,6 +223,7 @@ if __name__ == "__main__":
                 random_state=42,
                 memory=memory,
                 n_jobs=n_jobs,
+                do_spatial_cv=do_spatial_cv,
             )
             results = benchmark.run(nruns=10)
             df_results.append(results)
@@ -226,8 +269,8 @@ if __name__ == "__main__":
             (iterative_L1, data_args_I, {"alpha": estimator_alphas}),
             (iterative_L2, data_args_I, {"alpha": estimator_alphas}),
             (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}),
-            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
-            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
+            # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}),
+            # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}),
             (gamma_map, data_args_II, {"alpha": estimator_alphas}),
         ]
 
@@ -242,6 +285,7 @@ if __name__ == "__main__":
                 random_state=42,
                 memory=memory,
                 n_jobs=n_jobs,
+                do_spatial_cv=do_spatial_cv,
             )
             results = benchmark.run(nruns=10)
             df_results.append(results)
@@ -250,9 +294,14 @@ if __name__ == "__main__":
 
         data_path = Path("bsi_zoo/data")
         data_path.mkdir(exist_ok=True)
-        df_results.to_pickle(
-            data_path
-            / f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
-        )
+        if do_spatial_cv:
+            FILE_NAME = (
+                f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
+            )
+        else:
+            FILE_NAME = (
+                f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
+            )
+        df_results.to_pickle(data_path / FILE_NAME)
 
         print(df_results)
