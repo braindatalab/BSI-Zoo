@@ -43,7 +43,7 @@ def _run_estimator(
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
         y = whitener @ y
-
+        
     # estimate x_hat
     if do_spatial_cv:
         estimator_ = SpatialCVSolver(
@@ -90,7 +90,7 @@ def _run_estimator(
     this_results.update(this_data_args)
     this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
     if do_spatial_cv:
-        this_results.update({"estimator__alpha_cv": estimator_cv.get_alpha()})
+        this_results.update({"estimator__alpha_cv": estimator_.get_alpha()})
 
     return this_results
 
@@ -107,7 +107,7 @@ class Benchmark:
         memory=None,
         n_jobs=1,
         do_spatial_cv=False,
-        estimator_extra_params={},
+        estimator_extra_params={}
     ) -> None:
         self.estimator = estimator
         self.subject = subject
@@ -122,7 +122,7 @@ class Benchmark:
 
     def run(self, nruns=2):
         rng = check_random_state(self.random_state)
-        seeds = rng.randint(low=0, high=2**32, size=nruns)
+        seeds = rng.randint(low=0, high=2 ** 32, size=nruns)
 
         estimator = self.memory.cache(self.estimator)
 
@@ -139,7 +139,7 @@ class Benchmark:
                     estimator_name=self.estimator.__name__,
                     memory=self.memory,
                     do_spatial_cv=self.do_spatial_cv,
-                    extra_params=estimator_extra_params,
+                    extra_params=estimator_extra_params
                 )
                 for this_data_args, seed in itertools.product(
                     ParameterGrid(self.data_args), seeds
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     memory = Memory(".")
 
     for subject in ["CC120166", "CC120264", "CC120313", "CC120309"]:
-        """Fixed orientation parameters for the benchmark"""
+        """ Fixed orientation parameters for the benchmark """
 
         data_args_I = {
             "n_sensors": [50],
@@ -214,14 +214,14 @@ if __name__ == "__main__":
         }
 
         estimators = [
-            (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+            # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+            # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 1}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 2}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 3}),
         ]
 
         df_results = []
@@ -236,7 +236,7 @@ if __name__ == "__main__":
                 memory=memory,
                 n_jobs=n_jobs,
                 do_spatial_cv=do_spatial_cv,
-                estimator_extra_params=estimator_extra_params,
+                estimator_extra_params=estimator_extra_params
             )
             results = benchmark.run(nruns=10)
             df_results.append(results)
@@ -278,15 +278,16 @@ if __name__ == "__main__":
             "alpha": [0.9, 0.8, 0.7, 0.5, 0.4],  # this is actually SNR
         }
 
+        
         estimators = [
-            (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-            (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-            (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-            (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+            # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+            # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+            # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 1}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 2}),
+            (gamma_map, data_args_II, {"alpha": estimator_alphas},  {"update_mode": 3}),
         ]
 
         df_results = []
@@ -301,7 +302,7 @@ if __name__ == "__main__":
                 memory=memory,
                 n_jobs=n_jobs,
                 do_spatial_cv=do_spatial_cv,
-                estimator_extra_params=estimator_extra_params,
+                estimator_extra_params=estimator_extra_params
             )
             results = benchmark.run(nruns=10)
             df_results.append(results)
