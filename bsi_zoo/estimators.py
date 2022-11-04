@@ -29,8 +29,10 @@ def temporal_cv_metric(y,Sigma_Y):
     B_inv = inv(B); 
     logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
     """
+    ## XXX Need to be improved w.r.t speed (Perhaps use the following conditions)
     sign, logdet = np.linalg.slogdet(Sigma_Y)
-    return np.linalg.norm(np.linalg.sqrtm(np.linalg.inv(Sigma_Y)@y),ord='fro')**2 + logdet
+    out = np.linalg.norm(linalg.sqrtm(np.linalg.inv(Sigma_Y)@y),ord='fro')**2 + logdet
+    return out
 
 
 
@@ -289,8 +291,8 @@ class TemporalCVSolver(BaseEstimator, ClassifierMixin):
                 y_training = y[:, train_idx]
                 y_test = y[:, test_idx]
                 y_pred = self.L_ @ solver.coef_
-                q = np.sum(abs(solver.coef_), axis=1) != 0
-                Sigma_Y = self.cov + (self.L_ * q[:,None]) @ self.L_.T
+                X_diag = np.sum(abs(solver.coef_), axis=1) != 0
+                Sigma_Y = self.cov + (self.L_ * X_diag[None,:]) @ self.L_.T
                 # C_y = np.cov(y_test)
                 # XXX this needs to be fixed with a type 2 metric
                 temporal_cv_scores.append(
