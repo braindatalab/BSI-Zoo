@@ -18,6 +18,22 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+def temporal_cv_metric(y,Sigma_Y):
+    """Compute the log-det Bregman divergence between 
+    two matrices based on the calculation of Gaussian 
+    negative log-likelihood.
+
+    Both matrices needs to be squared and have the same 
+    size. 
+
+    B_inv = inv(B); 
+    logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
+    """
+    sign, logdet = np.linalg.slogdet(Sigma_Y)
+    return np.linalg.norm(np.linalg.sqrtm(np.linalg.inv(Sigma_Y)@y),ord='fro')**2 + logdet
+
+
+
 def logdet_Bregman_div_distance(A,B):
     """Compute the log-det Bregman divergence between 
     two matrices based on the calculation of Gaussian 
@@ -29,9 +45,9 @@ def logdet_Bregman_div_distance(A,B):
     B_inv = inv(B); 
     logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
     """
-    B_inv = np.invert(B)
+    B_inv = np.linalg.inv(B)
     logdet_distance = (A * (np.dot(A, B_inv))).sum(axis=1)
-    logdet_distance -= _logdet(A@B_inv) + A.size(0)
+    logdet_distance -= _logdet(A@B_inv) + np.shape(A,0)
     out = np.mean(logdet_distance)
     return out 
     
@@ -42,7 +58,7 @@ def logdet_Bregman_div_distance_NegLikelihood(y,Sigma_Y):
     negative log-likelihood.
     """ 
     log_lik = _gaussian_loglik_scorer(y,Sigma_Y)
-    NLL = -2 * log_lik
+    NLL = -2 * log_lik 
     return NLL 
     
 
@@ -267,16 +283,22 @@ class TemporalCVSolver(BaseEstimator, ClassifierMixin):
         for alpha in self.alphas:
             solver = clone(base_solver)
             solver.set_params(alpha=alpha)
-            this_scores = []
+            temporal_cv_scores = []
             for train_idx, test_idx in cv.split(y.T):
                 solver.fit(self.L_, y[:, train_idx])
+                y_training = y[:, train_idx]
+                y_test = y[:, test_idx]
                 y_pred = self.L_ @ solver.coef_
+                q = np.sum(abs(solver.coef_), axis=1) != 0
+                Sigma_Y = self.cov + (self.L_ * q[:,None]) @ self.L_.T
+                # C_y = np.cov(y_test)
                 # XXX this needs to be fixed with a type 2 metric
-                this_scores.append(
-                    np.mean((y_pred - y[:, test_idx]))
+                temporal_cv_scores.append(
+                    # np.mean((y_pred - y[:, test_idx]))
+                    temporal_cv_metric(y_test,Sigma_Y)
                 )
             scores.append(
-                np.mean(this_scores)
+                np.mean(temporal_cv_scores)
             )
 
         self.alpha_ = self.alphas[np.argmax(scores)]
