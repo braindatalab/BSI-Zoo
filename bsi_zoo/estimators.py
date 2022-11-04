@@ -1,4 +1,6 @@
 from mne.utils import logger, warn
+from mne.fixes import _logdet
+from mne.cov import _gaussian_loglik_scorer
 from mne.inverse_sparse.mxne_optim import groups_norm2, _mixed_norm_solver_bcd
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
@@ -23,8 +25,27 @@ def logdet_Bregman_div_distance(A,B):
 
     Both matrices needs to be squared and have the same 
     size. 
+
+    B_inv = inv(B); 
+    logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
     """
-    pass
+    B_inv = np.invert(B)
+    logdet_distance = (A * (np.dot(A, B_inv))).sum(axis=1)
+    logdet_distance -= _logdet(A@B_inv) + A.size(0)
+    out = np.mean(logdet_distance)
+    return out 
+    
+
+def logdet_Bregman_div_distance_NegLikelihood(y,Sigma_Y):
+    """Compute the log-det Bregman divergence between 
+    two matrices based on the calculation of Gaussian 
+    negative log-likelihood.
+    """ 
+    log_lik = _gaussian_loglik_scorer(y,Sigma_Y)
+    NLL = -2 * log_lik
+    return NLL 
+    
+
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
