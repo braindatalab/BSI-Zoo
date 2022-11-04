@@ -21,14 +21,14 @@ from bsi_zoo.estimators import (
 @pytest.mark.parametrize(
     "estimator,rtol,atol,cov_type,extra_params",
     [
-        (iterative_L1, 1e-1, 5e-1, "diag", {}),
-        (iterative_L2, 1e-1, 5e-1, "diag", {}),
-        (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
+        # (iterative_L1, 1e-1, 5e-1, "diag", {}),
+        # (iterative_L2, 1e-1, 5e-1, "diag", {}),
+        # (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 1e-1, 5e-1, "full", {}),
         (iterative_L2_typeII, 1e-1, 5e-1, "full", {}),
-        (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 1}),
-        (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 2}),
-        (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 3}),
+        # (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 1}),
+        # (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 2}),
+        # (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 3}),
     ],
 )
 def test_run_spatial_cv(

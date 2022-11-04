@@ -16,6 +16,17 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+def logdet_Bregman_div_distance(A,B):
+    """Compute the log-det Bregman divergence between 
+    two matrices based on the calculation of Gaussian 
+    negative log-likelihood.
+
+    Both matrices needs to be squared and have the same 
+    size. 
+    """
+    pass
+
+
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
