@@ -1,6 +1,4 @@
 from mne.utils import logger, warn
-from mne.fixes import _logdet
-from mne.cov import _gaussian_loglik_scorer
 from mne.inverse_sparse.mxne_optim import groups_norm2, _mixed_norm_solver_bcd
 from numpy.core.fromnumeric import mean
 from numpy.lib import diag
@@ -9,61 +7,7 @@ from scipy.sparse import spdiags
 from scipy import linalg
 import numpy as np
 from sklearn import linear_model
-from sklearn.model_selection import GridSearchCV
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
-from sklearn.model_selection import check_cv
-
-import warnings
-
-warnings.filterwarnings("ignore")
-
-
-def temporal_cv_metric(y,Sigma_Y):
-    """Compute the log-det Bregman divergence between 
-    two matrices based on the calculation of Gaussian 
-    negative log-likelihood.
-
-    Both matrices needs to be squared and have the same 
-    size. 
-
-    B_inv = inv(B); 
-    logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
-    """
-    ## XXX Need to be improved w.r.t speed (Perhaps use the following conditions)
-    sign, logdet = np.linalg.slogdet(Sigma_Y)
-    out = np.linalg.norm(linalg.sqrtm(np.linalg.inv(Sigma_Y)@y),ord='fro')**2 + logdet
-    return out
-
-
-
-def logdet_Bregman_div_distance(A,B):
-    """Compute the log-det Bregman divergence between 
-    two matrices based on the calculation of Gaussian 
-    negative log-likelihood.
-
-    Both matrices needs to be squared and have the same 
-    size. 
-
-    B_inv = inv(B); 
-    logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1); 
-    """
-    B_inv = np.linalg.inv(B)
-    logdet_distance = (A * (np.dot(A, B_inv))).sum(axis=1)
-    logdet_distance -= _logdet(A@B_inv) + np.shape(A,0)
-    out = np.mean(logdet_distance)
-    return out 
-    
-
-def logdet_Bregman_div_distance_NegLikelihood(y,Sigma_Y):
-    """Compute the log-det Bregman divergence between 
-    two matrices based on the calculation of Gaussian 
-    negative log-likelihood.
-    """ 
-    log_lik = _gaussian_loglik_scorer(y,Sigma_Y)
-    NLL = -2 * log_lik 
-    return NLL 
-    
-
+from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
@@ -176,154 +120,6 @@ class SpatialSolver(Solver):
 
     def score(self, X, y):
         return -np.mean(self.predict(X) - y) ** 2
-
-
-class SpatialCVSolver(BaseEstimator, ClassifierMixin):
-    def __init__(
-        self,
-        solver,
-        cov_type,
-        cov,
-        n_orient,
-        alphas=np.linspace(1.4, 0.1, 20),
-        cv=5,
-        extra_params={},
-        n_jobs=1,
-    ):
-        self.solver = solver
-        self.alphas = alphas
-        self.cov = cov
-        self.cov_type = cov_type
-        self.n_orient = n_orient
-        self.cv = cv
-        self.extra_params = extra_params
-        self.n_jobs = n_jobs
-
-    def fit(self, L, y):
-        self.L_ = L
-        self.y_ = y
-
-        return self
-
-    def predict(self, y):
-        gs = GridSearchCV(
-            estimator=SpatialSolver(
-                self.solver,
-                cov=self.cov,
-                alpha=None,
-                cov_type=self.cov_type,
-                n_orient=self.n_orient,
-            ),
-            param_grid=dict(alpha=self.alphas),
-            scoring="neg_mean_squared_error",
-            cv=self.cv,
-            n_jobs=self.n_jobs,
-        )
-        gs.fit(self.L_, y)
-        self.grid_search_ = gs
-        self.alpha_ = gs.best_estimator_.alpha
-
-        if self.cov_type == "diag":
-            self.coef_ = self.solver(
-                self.L_,
-                y,
-                alpha=self.alpha_,
-                n_orient=self.n_orient,
-                **self.extra_params
-            )
-        else:
-            self.coef_ = self.solver(
-                self.L_,
-                y,
-                self.cov,
-                alpha=self.alpha_,
-                n_orient=self.n_orient,
-                **self.extra_params
-            )
-
-        return self.coef_
-
-
-class TemporalCVSolver(BaseEstimator, ClassifierMixin):
-    def __init__(
-        self,
-        solver,
-        cov_type,
-        cov,
-        n_orient,
-        alphas=np.linspace(1.4, 0.1, 20),
-        cv=2,
-        extra_params={},
-        n_jobs=1,
-    ):
-        self.solver = solver
-        self.alphas = alphas
-        self.cov = cov
-        self.cov_type = cov_type
-        self.n_orient = n_orient
-        self.cv = cv
-        self.extra_params = extra_params
-        self.n_jobs = n_jobs
-
-    def fit(self, L, y):
-        self.L_ = L
-        self.y_ = y
-
-        return self
-
-    def predict(self, y):
-        base_solver = SpatialSolver(
-            self.solver,
-            cov=self.cov,
-            alpha=None,
-            cov_type=self.cov_type,
-            n_orient=self.n_orient,
-        )
-
-        cv = check_cv(self.cv)
-        scores = []
-        for alpha in self.alphas:
-            solver = clone(base_solver)
-            solver.set_params(alpha=alpha)
-            temporal_cv_scores = []
-            for train_idx, test_idx in cv.split(y.T):
-                solver.fit(self.L_, y[:, train_idx])
-                y_training = y[:, train_idx]
-                y_test = y[:, test_idx]
-                y_pred = self.L_ @ solver.coef_
-                X_diag = np.sum(abs(solver.coef_), axis=1) != 0
-                Sigma_Y = self.cov + (self.L_ * X_diag[None,:]) @ self.L_.T
-                # C_y = np.cov(y_test)
-                # XXX this needs to be fixed with a type 2 metric
-                temporal_cv_scores.append(
-                    # np.mean((y_pred - y[:, test_idx]))
-                    temporal_cv_metric(y_test,Sigma_Y)
-                )
-            scores.append(
-                np.mean(temporal_cv_scores)
-            )
-
-        self.alpha_ = self.alphas[np.argmax(scores)]
-
-        if self.cov_type == "diag":
-            self.coef_ = self.solver(
-                self.L_,
-                y,
-                alpha=self.alpha_,
-                n_orient=self.n_orient,
-                **self.extra_params
-            )
-        else:
-            self.coef_ = self.solver(
-                self.L_,
-                y,
-                self.cov,
-                alpha=self.alpha_,
-                n_orient=self.n_orient,
-                **self.extra_params
-            )
-
-        return self.coef_
 
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
@@ -539,7 +335,8 @@ def iterative_L1_typeII(
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
-    n_orient : XXX
+    n_orient : int
+        Number of dipoles per locations (typically 1 or 3).
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
