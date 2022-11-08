@@ -38,8 +38,9 @@ def _logdet(A):
 def logdet_bregman_div_distance_nll(y, Sigma_Y):
     """Compute the log-det Bregman divergence between two matrices."""
     Sigma_Y_inv = np.linalg.inv(Sigma_Y)
-    Cov_y = np.cov(y)
-    _, n_features = Sigma_Y.shape
+    # Cov_y = np.cov(y)
+    n_features, n_times  = y.shape
+    Cov_y = y @ y.T / n_times
     log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1))
     log_like -= _logdet(Cov_y @ Sigma_Y_inv)
     out = log_like - n_features
@@ -140,14 +141,14 @@ class TemporalCVSolver(BaseCVSolver):
                 y_test = y[:, test_idx]
                 # X_diag = np.sum(np.abs(solver.coef_), axis=1) != 0
                 Cov_X = np.cov(solver.coef_)
-                # X_Sqaure = solver.coef_ @ solver.coef_.T
-                # Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
+                X_Sqaure = solver.coef_ @ solver.coef_.T
+                Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
                 Sigma_Y = self.cov + ((self.L_ @ Cov_X) @ self.L_.T)
                 temporal_cv_scores.append(
-                    temporal_cv_metric(y_test, Sigma_Y)
-                    # logdet_bregman_div_distance_nll(y_test, Sigma_Y)
+                    # temporal_cv_metric(y_test, Sigma_Y)
+                    logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
             scores.append(
                 np.mean(temporal_cv_scores)
             )
-        self.alpha_ = self.alphas[np.argmax((scores))]
+        self.alpha_ = self.alphas[np.argmin((scores))]
