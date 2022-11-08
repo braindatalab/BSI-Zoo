@@ -148,4 +148,4 @@ class TemporalCVSolver(BaseCVSolver):
             scores.append(
                 np.mean(temporal_cv_scores)
             )
-        self.alpha_ = self.alphas[np.armax((scores))]
+        self.alpha_ = self.alphas[np.argmax((scores))]
