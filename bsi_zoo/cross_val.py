@@ -39,7 +39,7 @@ def logdet_bregman_div_distance_nll(y, Sigma_Y):
     """Compute the log-det Bregman divergence between two matrices."""
     Sigma_Y_inv = np.linalg.inv(Sigma_Y)
     # Cov_y = np.cov(y)
-    n_features, n_times  = y.shape
+    n_features, n_times = y.shape
     Cov_y = y @ y.T / n_times
     log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1))
     log_like -= _logdet(Cov_y @ Sigma_Y_inv)
