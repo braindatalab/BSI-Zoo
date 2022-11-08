@@ -52,7 +52,7 @@ def test_cv(
     if cv_type == "spatial":
         n_times = 5
     else:
-        n_times = 100
+        n_times = 250
 
     n_orient = 1 if orientation_type == "fixed" else 3
 
@@ -94,7 +94,7 @@ def test_cv(
             cov_type=cov_type,
             cov=cov,
             n_orient=n_orient,
-            cv=2,
+            cv=4,
             extra_params=extra_params
         )
 
