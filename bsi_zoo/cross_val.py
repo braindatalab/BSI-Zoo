@@ -26,7 +26,7 @@ def temporal_cv_metric(y, Sigma_Y):
 
 
 def _logdet(A):
-    """Compute the log det of a positive semidefinite matrix."""
+    """Compute the logdet of a positive semidefinite matrix."""
     from scipy import linalg
     vals = linalg.eigvalsh(A)
     # avoid negative (numerical errors) or zero (semi-definite matrix) values
@@ -36,7 +36,7 @@ def _logdet(A):
 
 
 def logdet_bregman_div_distance_nll(y, Sigma_Y):
-    """Compute the Gaussian log likelihood of y given covariance Sigma_Y."""
+    """Compute the log-det Bregman divergence between two matrices."""
     Sigma_Y_inv = np.linalg.inv(Sigma_Y)
     Cov_y = np.cov(y)
     _, n_features = Sigma_Y.shape
@@ -142,10 +142,10 @@ class TemporalCVSolver(BaseCVSolver):
                 Cov_X = np.cov(solver.coef_)
                 Sigma_Y = self.cov + (self.L_ @ Cov_X) @ self.L_.T
                 temporal_cv_scores.append(
-                    # temporal_cv_metric(y_test, Sigma_Y)
-                    logdet_bregman_div_distance_nll(y_test, Sigma_Y)
+                    temporal_cv_metric(y_test, Sigma_Y)
+                    # logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
             scores.append(
                 np.mean(temporal_cv_scores)
             )
-        self.alpha_ = self.alphas[np.argmin(np.abs(scores))]
+        self.alpha_ = self.alphas[np.argmin((scores))]
