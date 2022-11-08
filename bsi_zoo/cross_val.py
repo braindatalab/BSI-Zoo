@@ -46,45 +46,6 @@ def logdet_bregman_div_distance_nll(y, Sigma_Y):
     return out
 
 
-# XXX should be use this?
-# def logdet_bregman_div_distance(A, B):
-#     """Compute the log-det Bregman divergence between two matrices.
-
-#     It is based on the calculation of Gaussian negative log-likelihood.
-#     Both matrices needs to be squared and have the same size.
-
-#     B_inv = inv(B);
-#     logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1)
-
-#     Parameters
-#     ----------
-#     A : ndarray, shape (n_features, n_features)
-#         The first matrix.
-#     B : ndarray, shape (n_features, n_features)
-#         The second matrix
-
-#     Returns
-#     -------
-#     div : float
-#         The value of the Bregman divergence.
-#     """
-#     B_inv = np.linalg.inv(B)
-#     logdet_distance = (A * (np.dot(A, B_inv))).sum(axis=1)
-#     logdet_distance -= _logdet(A @ B_inv) + A.shape[0]
-#     out = np.mean(logdet_distance)
-#     return out
-
-
-# def logdet_bregman_div_distance_nll(y, Sigma_Y):
-#     """Compute the log-det Bregman divergence between
-#     two matrices based on the calculation of Gaussian
-#     negative log-likelihood.
-#     """
-#     log_lik = _gaussian_loglik_scorer(y, Sigma_Y)
-#     nll = -2 * log_lik
-#     return nll
-
-
 class BaseCVSolver(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
@@ -178,13 +139,9 @@ class TemporalCVSolver(BaseCVSolver):
                 solver.fit(self.L_, y[:, train_idx])
                 y_test = y[:, test_idx]
                 # X_diag = np.sum(np.abs(solver.coef_), axis=1) != 0
-                # XXX this next formula seems to be wrong as it ignores
-                # the estimated or empirical source variance.
                 Cov_X = np.cov(solver.coef_)
                 Sigma_Y = self.cov + (self.L_ @ Cov_X) @ self.L_.T
-                # XXX this needs to be fixed with a type 2 metric
                 temporal_cv_scores.append(
-                    # np.mean((y_pred - y[:, test_idx]))
                     temporal_cv_metric(y_test, Sigma_Y)
                 )
             scores.append(
