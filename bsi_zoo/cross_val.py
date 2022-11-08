@@ -40,7 +40,8 @@ def logdet_bregman_div_distance_nll(y, Sigma_Y):
     Sigma_Y_inv = np.linalg.inv(Sigma_Y)
     Cov_y = np.cov(y)
     _, n_features = Sigma_Y.shape
-    log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1)) - _logdet(Cov_y @ Sigma_Y_inv) 
+    log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1))
+    log_like -= _logdet(Cov_y @ Sigma_Y_inv)
     out = log_like - n_features
     return out
 
