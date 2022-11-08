@@ -37,12 +37,11 @@ def _logdet(A):
 
 def logdet_bregman_div_distance_nll(y, Sigma_Y):
     """Compute the Gaussian log likelihood of y given covariance Sigma_Y."""
-    # compute empirical covariance of the test set
-    precision = np.inv(Sigma_Y)
-    _, n_features = y.shape
-    log_like = -.5 * (y * (np.dot(y, precision))).sum(axis=1)
-    log_like -= .5 * (n_features * np.log(2. * np.pi) - _logdet(precision))
-    out = np.mean(log_like)
+    Sigma_Y_inv = np.linalg.inv(Sigma_Y)
+    Cov_y = np.cov(y)
+    _, n_features = Sigma_Y.shape
+    log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1)) - _logdet(Cov_y @ Sigma_Y_inv) 
+    out = log_like - n_features
     return out
 
 
@@ -142,10 +141,10 @@ class TemporalCVSolver(BaseCVSolver):
                 Cov_X = np.cov(solver.coef_)
                 Sigma_Y = self.cov + (self.L_ @ Cov_X) @ self.L_.T
                 temporal_cv_scores.append(
-                    temporal_cv_metric(y_test, Sigma_Y)
+                    # temporal_cv_metric(y_test, Sigma_Y)
+                    logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
             scores.append(
                 np.mean(temporal_cv_scores)
             )
-
         self.alpha_ = self.alphas[np.argmin(np.abs(scores))]
