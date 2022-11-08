@@ -182,8 +182,6 @@ class TemporalCVSolver(BaseCVSolver):
                 # the estimated or empirical source variance.
                 Cov_X = np.cov(solver.coef_)
                 Sigma_Y = self.cov + (self.L_ @ Cov_X) @ self.L_.T
-                # 0/0 
-                # C_y = np.cov(y_test)
                 # XXX this needs to be fixed with a type 2 metric
                 temporal_cv_scores.append(
                     # np.mean((y_pred - y[:, test_idx]))
