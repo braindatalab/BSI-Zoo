@@ -180,7 +180,8 @@ class TemporalCVSolver(BaseCVSolver):
                 X_diag = np.sum(np.abs(solver.coef_), axis=1) != 0
                 # XXX this next formula seems to be wrong as it ignores
                 # the estimated or empirical source variance.
-                Sigma_Y = self.cov + (self.L_ * X_diag[None, :]) @ self.L_.T
+                Cov_X = np.cov(X_diag[None, :])
+                Sigma_Y = self.cov + (self.L_ * Cov_X) @ self.L_.T
                 # C_y = np.cov(y_test)
                 # XXX this needs to be fixed with a type 2 metric
                 temporal_cv_scores.append(
