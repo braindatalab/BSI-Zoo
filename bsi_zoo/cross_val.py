@@ -53,7 +53,7 @@ class BaseCVSolver(BaseEstimator, ClassifierMixin):
         cov_type,
         cov,
         n_orient,
-        alphas=np.linspace(1.4, 0.1, 20),
+        alphas=np.linspace(1.4, 0.01, 30),
         cv=5,
         extra_params={},
         n_jobs=1,
@@ -148,4 +148,4 @@ class TemporalCVSolver(BaseCVSolver):
                 np.mean(temporal_cv_scores)
             )
 
-        self.alpha_ = self.alphas[np.argmax(scores)]
+        self.alpha_ = self.alphas[np.argmin(np.abs(scores))]

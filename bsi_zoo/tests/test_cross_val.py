@@ -73,9 +73,9 @@ def test_cv(
         y = whitener @ y
 
     if orientation_type == "fixed":
-        alphas = [0.1, 0.01, 0.001, 0.0001, 0.00001]
+        alphas = [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0.00001]
     else:
-        alphas = [0.1, 0.01, 0.001]
+        alphas = [0.3, 0.2, 0.1, 0.01, 0.001]
 
     if cv_type == "spatial":
         solver = SpatialCVSolver(
