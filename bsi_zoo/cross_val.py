@@ -140,13 +140,13 @@ class TemporalCVSolver(BaseCVSolver):
                 solver.fit(self.L_, y[:, train_idx])
                 y_test = y[:, test_idx]
                 # X_diag = np.sum(np.abs(solver.coef_), axis=1) != 0
-                Cov_X = np.cov(solver.coef_)
-                # X_Sqaure = solver.coef_ @ solver.coef_.T
-                # Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
+                # Cov_X = np.cov(solver.coef_)
+                X_Sqaure = solver.coef_ @ solver.coef_.T
+                Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
                 Sigma_Y = self.cov + ((self.L_ @ Cov_X) @ self.L_.T)
                 temporal_cv_scores.append(
-                    temporal_cv_metric(y_test, Sigma_Y)
-                    # logdet_bregman_div_distance_nll(y_test, Sigma_Y)
+                    # temporal_cv_metric(y_test, Sigma_Y)
+                    logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
             scores.append(
                 np.mean(temporal_cv_scores)
