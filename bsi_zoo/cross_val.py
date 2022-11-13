@@ -1,4 +1,3 @@
-from scipy import linalg
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
