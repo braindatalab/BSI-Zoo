@@ -8,23 +8,6 @@ from sklearn.model_selection import check_cv
 from .estimators import SpatialSolver
 
 
-def temporal_cv_metric(y, Sigma_Y):
-    """Compute the log-det Bregman divergence between two matrices.
-
-    It is based on the calculation of Gaussian negative log-likelihood.
-    Both matrices needs to be squared and have the same size.
-    It is given by:
-
-    B_inv = inv(B);
-    logdet_distance = trace(A*B_inv) - logdet(A*B_inv) - size(A,1)
-    """
-    # XXX Need improve w.r.t speed (Perhaps use the following conditions)
-    _, logdet = np.linalg.slogdet(Sigma_Y)
-    out = (np.linalg.norm(linalg.sqrtm(np.linalg.inv(Sigma_Y) @ y),
-                          ord='fro')**2 + logdet)
-    return out
-
-
 def _logdet(A):
     """Compute the logdet of a positive semidefinite matrix."""
     from scipy import linalg
@@ -38,7 +21,6 @@ def _logdet(A):
 def logdet_bregman_div_distance_nll(y, Sigma_Y):
     """Compute the log-det Bregman divergence between two matrices."""
     Sigma_Y_inv = np.linalg.inv(Sigma_Y)
-    # Cov_y = np.cov(y)
     n_features, n_times = y.shape
     Cov_y = y @ y.T / n_times
     log_like = np.mean(np.sum((y.T @ Sigma_Y_inv) * y.T, axis=1))
@@ -139,13 +121,15 @@ class TemporalCVSolver(BaseCVSolver):
             for train_idx, test_idx in cv.split(y.T):
                 solver.fit(self.L_, y[:, train_idx])
                 y_test = y[:, test_idx]
-                # X_diag = np.sum(np.abs(solver.coef_), axis=1) != 0
-                # Cov_X = np.cov(solver.coef_)
-                X_Sqaure = solver.coef_ @ solver.coef_.T
-                Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
-                Sigma_Y = self.cov + ((self.L_ @ Cov_X) @ self.L_.T)
+
+                # X_Sqaure = solver.coef_ @ solver.coef_.T
+                # Cov_X = np.diag(np.linalg.norm(X_Sqaure, axis=0))
+                # Sigma_Y = self.cov + ((self.L_ @ Cov_X) @ self.L_.T)
+
+                X_var = np.mean(solver.coef_ ** 2, axis=1)  # already zero mean
+                Sigma_Y = self.cov + ((self.L_ * X_var[None, :]) @ self.L_.T)
+
                 temporal_cv_scores.append(
-                    # temporal_cv_metric(y_test, Sigma_Y)
                     logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
             scores.append(
