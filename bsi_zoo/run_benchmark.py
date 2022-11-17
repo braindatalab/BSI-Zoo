@@ -61,11 +61,11 @@ for subject in subjects:
     }
 
     estimators = [
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
@@ -125,11 +125,11 @@ for subject in subjects:
     }
 
     estimators = [
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),

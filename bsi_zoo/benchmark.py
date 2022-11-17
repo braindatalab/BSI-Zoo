@@ -8,7 +8,8 @@ from sklearn.model_selection import ParameterGrid
 
 
 from bsi_zoo.data_generator import get_data
-from bsi_zoo.estimators import SpatialCVSolver, Solver
+from bsi_zoo.estimators import Solver
+from bsi_zoo.cross_val import SpatialCVSolver
 
 
 def _run_estimator(
