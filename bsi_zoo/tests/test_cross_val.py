@@ -26,7 +26,7 @@ from bsi_zoo.cross_val import (
     [
         (iterative_L1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 1e-1, 5e-1, "diag", {}),
-        (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
+        # (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 1e-1, 5e-1, "full", {}),
         (iterative_L2_typeII, 1e-1, 5e-1, "full", {}),
         (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 1}),
