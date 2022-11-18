@@ -80,7 +80,7 @@ def _run_estimator(
     this_results.update(this_data_args)
     this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
     if do_spatial_cv:
-        this_results.update({"estimator__alpha_cv": estimator_.get_alpha()})
+        this_results.update({"estimator__alpha_cv": estimator_.alpha_})
 
     return this_results
 
@@ -113,7 +113,7 @@ class Benchmark:
 
     def run(self, nruns=2):
         rng = check_random_state(self.random_state)
-        seeds = rng.randint(low=0, high=2 ** 32, size=nruns)
+        seeds = rng.randint(low=0, high=2**32, size=nruns)
 
         estimator = self.memory.cache(self.estimator)
 
