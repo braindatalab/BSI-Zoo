@@ -26,7 +26,7 @@ from bsi_zoo.cross_val import (
     [
         (iterative_L1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 1e-1, 5e-1, "diag", {}),
-        # (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
+        (iterative_sqrt, 1e-1, 5e-1, "diag", {}),
         (iterative_L1_typeII, 1e-1, 5e-1, "full", {}),
         (iterative_L2_typeII, 1e-1, 5e-1, "full", {}),
         (gamma_map, 1e-1, 5e-1, "full", {"update_mode": 1}),
@@ -48,6 +48,9 @@ def test_cv(
 
     if estimator in [iterative_L1_typeII, iterative_L2_typeII] and cov_type == "full":
         pytest.skip("iterative L1 type 2 breaks with full covariance")
+
+    if estimator in [iterative_sqrt] and cv_type == "temporal":
+        pytest.skip("iterative sqrt breaks with temporal cv")
 
     if cv_type == "spatial":
         n_times = 5
@@ -121,3 +124,4 @@ def test_cv(
         np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
 
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
+    # This is a new line that ends the file.
