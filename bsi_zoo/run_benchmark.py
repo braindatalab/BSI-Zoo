@@ -6,8 +6,8 @@ from bsi_zoo.benchmark import Benchmark
 from bsi_zoo.estimators import (
     iterative_L1,
     iterative_L2,
-    iterative_L1_typeII,
-    iterative_L2_typeII,
+    # iterative_L1_typeII,
+    # iterative_L2_typeII,
     gamma_map,
     iterative_sqrt,
 )
