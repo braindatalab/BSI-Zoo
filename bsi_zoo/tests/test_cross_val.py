@@ -10,12 +10,9 @@ from bsi_zoo.estimators import (
     iterative_sqrt,
     iterative_L1_typeII,
     iterative_L2_typeII,
-    gamma_map
+    gamma_map,
 )
-from bsi_zoo.cross_val import (
-    SpatialCVSolver,
-    TemporalCVSolver
-)
+from bsi_zoo.cross_val import SpatialCVSolver, TemporalCVSolver
 
 
 @pytest.mark.parametrize("cv_type", ["temporal", "spatial"])
@@ -98,7 +95,7 @@ def test_cv(
             cov=cov,
             n_orient=n_orient,
             cv=4,
-            extra_params=extra_params
+            extra_params=extra_params,
         )
 
     solver.fit(L=L, y=y)
@@ -124,4 +121,3 @@ def test_cv(
         np.testing.assert_allclose(noise, noise_hat, rtol=1, atol=5)
 
     np.testing.assert_allclose(x, x_hat, rtol=rtol, atol=atol)
-    # This is a new line that ends the file.
