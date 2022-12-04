@@ -38,7 +38,7 @@ memory = Memory(".")
 for subject in subjects:
     """Fixed orientation parameters for the benchmark"""
 
-    orientation_type = "fixed" 
+    orientation_type = "fixed"
     data_args_I = {
         "n_sensors": [50],
         "n_times": [10],
