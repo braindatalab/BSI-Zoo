@@ -46,6 +46,7 @@ def test_estimator(
     orientation_type,
     extra_params,
     save_estimates=False,
+    seed=42
 ):
 
     path_to_leadfield = get_leadfield_path(
@@ -58,11 +59,11 @@ def test_estimator(
         n_sensors=50,
         n_times=n_times,
         n_sources=200,
-        n_orient=n_orient,
         nnz=nnz,
         cov_type=cov_type,
         path_to_leadfield=path_to_leadfield,
         orientation_type=orientation_type,
+        seed=seed,
     )
 
     if cov_type == "diag":

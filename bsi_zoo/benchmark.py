@@ -29,6 +29,8 @@ def _run_estimator(
 
     y, L, x, cov, _ = memory.cache(get_data)(**this_data_args, seed=seed)
 
+    n_orient = 3 if this_data_args["orientation_type"] == "free" else 1
+
     if this_data_args["cov_type"] == "diag":
         whitener = linalg.inv(linalg.sqrtm(cov))
         L = whitener @ L
@@ -41,7 +43,7 @@ def _run_estimator(
             alphas=this_estimator_args["alpha"],
             cov_type=this_data_args["cov_type"],
             cov=cov,
-            n_orient=this_data_args["n_orient"],
+            n_orient=n_orient,
             cv=3,
             extra_params=extra_params,
         ).fit(L=L, y=y)
@@ -52,7 +54,7 @@ def _run_estimator(
             alpha=this_estimator_args["alpha"],
             cov_type=this_data_args["cov_type"],
             cov=cov,
-            n_orient=this_data_args["n_orient"],
+            n_orient=n_orient,
             extra_params=extra_params,
         ).fit(L=L, y=y)
         x_hat = estimator_.predict(y)

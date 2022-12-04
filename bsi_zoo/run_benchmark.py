@@ -14,7 +14,7 @@ from bsi_zoo.estimators import (
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 10
+n_jobs = 1
 nruns = 3
 do_spatial_cv = True
 subjects = ["CC120313"]
@@ -38,15 +38,15 @@ memory = Memory(".")
 for subject in subjects:
     """Fixed orientation parameters for the benchmark"""
 
+    orientation_type = "fixed" 
     data_args_I = {
         "n_sensors": [50],
         "n_times": [10],
         "n_sources": [200],
-        "n_orient": [3],
         "nnz": nnzs,
         "cov_type": ["diag"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
-        "orientation_type": ["fixed"],
+        "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
+        "orientation_type": [orientation_type],
         "alpha": alpha_SNR,  # this is actually SNR
     }
 
@@ -54,11 +54,10 @@ for subject in subjects:
         "n_sensors": [50],
         "n_times": [10],
         "n_sources": [200],
-        "n_orient": [3],
         "nnz": nnzs,
         "cov_type": ["full"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="fixed")],
-        "orientation_type": ["fixed"],
+        "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
+        "orientation_type": [orientation_type],
         "alpha": alpha_SNR,  # this is actually SNR
     }
 
@@ -104,15 +103,15 @@ for subject in subjects:
 
     """ Free orientation parameters for the benchmark """
 
+    orientation_type = "free"
     data_args_I = {
         "n_sensors": [50],
         "n_times": [10],
         "n_sources": [200],
-        "n_orient": [3],
         "nnz": nnzs,
         "cov_type": ["diag"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
-        "orientation_type": ["free"],
+        "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
+        "orientation_type": [orientation_type],
         "alpha": alpha_SNR,  # this is actually SNR
     }
 
@@ -120,11 +119,10 @@ for subject in subjects:
         "n_sensors": [50],
         "n_times": [10],
         "n_sources": [200],
-        "n_orient": [3],
         "nnz": nnzs,
         "cov_type": ["full"],
-        "path_to_leadfield": [get_leadfield_path(subject, type="free")],
-        "orientation_type": ["free"],
+        "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
+        "orientation_type": [orientation_type],
         "alpha": alpha_SNR,  # this is actually SNR
     }
 
