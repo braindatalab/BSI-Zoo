@@ -40,6 +40,7 @@ def test_cv(
     nnz,
     orientation_type,
     extra_params,
+    seed=42,
 ):
     assert cv_type in ["temporal", "spatial"]
 
@@ -60,11 +61,11 @@ def test_cv(
         n_sensors=50,
         n_times=n_times,
         n_sources=75 // n_orient,
-        n_orient=n_orient,
         nnz=nnz,
         cov_type=cov_type,
         path_to_leadfield=None,
         orientation_type=orientation_type,
+        seed=seed,
     )
 
     if cov_type == "diag":

@@ -5,7 +5,6 @@ def get_data(
     n_sensors,
     n_times,
     n_sources,
-    n_orient,
     nnz,
     cov_type,
     path_to_leadfield,
@@ -14,6 +13,7 @@ def get_data(
     seed=None,
 ):
     if orientation_type == "fixed":
+        n_orient = 1
         rng = np.random.RandomState(seed)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)
@@ -57,7 +57,7 @@ def get_data(
             x = x[:, 0]
 
     elif orientation_type == "free":
-
+        n_orient = 3
         rng = np.random.RandomState(seed)
         if path_to_leadfield is not None:
             lead_field = np.load(path_to_leadfield, allow_pickle=True)

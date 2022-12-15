@@ -28,6 +28,9 @@ def logdet_bregman_div_distance_nll(y, Sigma_Y):
     return out
 
 
+DEFAULT_ALPHA_GRID = np.linspace(1.4, 0.01, 30)
+
+
 class BaseCVSolver(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
@@ -35,7 +38,7 @@ class BaseCVSolver(BaseEstimator, ClassifierMixin):
         cov_type,
         cov,
         n_orient,
-        alphas=np.linspace(1.4, 0.01, 30),
+        alphas=DEFAULT_ALPHA_GRID,
         cv=5,
         extra_params={},
         n_jobs=1,
