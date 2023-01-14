@@ -1,5 +1,6 @@
 from joblib import Memory
 from pathlib import Path
+import numpy as np
 import pandas as pd
 
 from bsi_zoo.benchmark import Benchmark
@@ -23,16 +24,17 @@ subjects = ["CC120313"]
 metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
 nnzs = [1, 2, 3, 5]
 alpha_SNR = [0.9, 0.8, 0.6, 0.5, 0.4]
-estimator_alphas = [
-    0.01,
-    0.01544452,
-    0.02385332,
-    0.03684031,
-    0.0568981,
-    0.08787639,
-    0.13572088,
-    0.2096144,
-]  # logspaced
+# estimator_alphas = [
+#     0.01,
+#     0.01544452,
+#     0.02385332,
+#     0.03684031,
+#     0.0568981,
+#     0.08787639,
+#     0.13572088,
+#     0.2096144,
+# ]  # logspaced
+estimator_alphas = np.logspace(0, -2.5, 15)[1:]
 memory = Memory(".")
 
 for subject in subjects:
