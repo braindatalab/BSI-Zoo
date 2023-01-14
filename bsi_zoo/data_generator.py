@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import wishart
 
 
 def _add_noise(cov_type, y, alpha, rng, n_sensors, n_times):
@@ -6,17 +7,16 @@ def _add_noise(cov_type, y, alpha, rng, n_sensors, n_times):
     if cov_type == "diag":
         if noise_type == "random":
             # initialization of the noise covariance matrix with a random diagonal matrix
-            cov = rng.randn(n_sensors, n_sensors)
-            cov = 1e-3 * (cov @ cov.T)
+            rv = wishart(df=n_sensors, scale=1e-3 * np.eye(n_sensors))
+            cov = rv.rvs()
             cov = np.diag(np.diag(cov))
         else:
             # initialization of the noise covariance with an identity matrix
             cov = 1e-2 * np.diag(np.ones(n_sensors))
     else:
         # initialization of the noise covariance matrix with a full PSD random matrix
-        cov = rng.randn(n_sensors, n_sensors)
-        cov = 1e-3 * (cov @ cov.T)
-        # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+        rv = wishart(df=n_sensors, scale=1e-3 * np.eye(n_sensors))
+        cov = rv.rvs()
 
     signal_norm = np.linalg.norm(y, "fro")
     noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
@@ -54,15 +54,15 @@ def get_data(
             else rng.randn(n_sensors, n_sources, n_orient)
         )
 
+    # generate source locations
+    idx = rng.choice(n_sources, size=nnz, replace=False)
     if orientation_type == "fixed":
         x = np.zeros((n_sources, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
+        x[idx] = rng.randn(nnz, n_times)
         y = L @ x
     elif orientation_type == "free":
         x = np.zeros((n_sources, n_orient, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(
-            nnz, n_orient, n_times
-        )
+        x[idx] = rng.randn(nnz, n_orient, n_times)
         y = np.einsum("nmr, mrd->nd", L, x)
 
     # add noise
