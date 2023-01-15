@@ -141,13 +141,13 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         measurement vector, capturing sensor measurements
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
-        Defaults to 1.0
+        Defaults to 0.2.
     n_orient : int
         Number of dipoles per location (typically 1 or 3).
     max_iter : int, optional
-        The maximum number of inner loop iterations
+        The maximum number of inner loop iterations. Defaults to 1000.
     max_iter_reweighting : int, optional
-        Maximum number of reweighting steps i.e outer loop iterations
+        Maximum number of reweighting steps i.e outer loop iterations. Defaults to 10.
 
     Returns
     -------
@@ -157,17 +157,17 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
 
     References
     ----------
-    XXX
+    [1] Candes, Wakin, Boyd, "Enhancing Sparsity by Reweighted l1 Minimization",
+    J Fourier Anal Appl (2008) 14: 877–905
+    https://web.stanford.edu/~boyd/papers/pdf/rwl1.pdf
     """
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
 
-    def g(w):
-        return np.sqrt(groups_norm2(w.copy(), n_orient))
-
     def gprime(w):
-        return np.repeat(g(w), n_orient).ravel() + eps
+        grp_norms = np.sqrt(groups_norm2(w.copy(), n_orient))
+        return np.repeat(grp_norms, n_orient).ravel() + eps
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -200,16 +200,12 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2.
-    n_orient : XXX
+    n_orient : int
+        Number of dipoles per location (typically 1 or 3).
     max_iter : int, optional
-        The maximum number of inner loop iterations
+        The maximum number of inner loop iterations. Defaults to 1000.
     max_iter_reweighting : int, optional
-        Maximum number of reweighting steps i.e outer loop iterations
-    tol : float, optional
-        The tolerance for the optimization: if the updates are
-        smaller than ``tol``, the optimization code checks the
-        dual gap for optimality and continues until it is smaller
-        than ``tol``.
+        Maximum number of reweighting steps i.e outer loop iterations. Defaults to 10.
 
     Returns
     -------
@@ -221,16 +217,13 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
     ----------
     TODO
     """
-    # XXX : cov is not used
     eps = np.finfo(float).eps
     _, n_sources = L.shape
     weights = np.ones(n_sources)
 
-    def g(w):
-        return groups_norm2(w.copy(), n_orient)
-
     def gprime(w):
-        return np.repeat(g(w), n_orient).ravel() + eps
+        grp_norm2 = groups_norm2(w.copy(), n_orient)
+        return np.repeat(grp_norm2, n_orient).ravel() + eps
 
     alpha_max = abs(L.T.dot(y)).max() / len(L)
     alpha = alpha * alpha_max
@@ -252,7 +245,7 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
 
     Iterative sqrt (L_0.5)::
         g(x_i) = sqrt(|x_i|)
-        w_i^(k+1) <-- [2sqrt(|x_i|)+epsilon]^-1
+        w_i^(k+1) <-- [2 sqrt(|x_i|)+epsilon]^-1
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
 
@@ -278,7 +271,9 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
 
     References
     ----------
-    TODO
+    [1] Strohmeier, D., Bekthi, Y., Haueisen, J., & Gramfort, A. (2016). The iterative
+        reweighted Mixed-Norm Estimate for spatio-temporal MEG/EEG source reconstruction.
+        IEEE Transactions on Medical Imaging Year : 2016
     """
     _, n_sources = L.shape
     weights = np.ones(n_sources)
@@ -338,9 +333,10 @@ def iterative_L1_typeII(
     n_orient : int
         Number of dipoles per locations (typically 1 or 3).
     max_iter : int, optional
-        The maximum number of inner loop iterations
+        The maximum number of inner loop iterations. Defaults to 1000.
     max_iter_reweighting : int, optional
-        Maximum number of reweighting steps i.e outer loop iterations
+        Maximum number of reweighting steps i.e outer loop iterations.
+        Defaults to 10.
 
     Returns
     -------
@@ -434,7 +430,8 @@ def iterative_L2_typeII(
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
-    n_orient : XXX
+    n_orient : int
+        Number of dipoles per locations (typically 1 or 3).
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -524,7 +521,7 @@ def gamma_map(
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
     max_iter : int, optional
-        The maximum number iterations
+        The maximum number iterations. Defaults to 1000.
     tol : float
         Tolerance parameter for convergence.
     update_mode : int
@@ -723,7 +720,8 @@ def champagne(
     alpha : float
         Constant that makes a trade-off between the data fidelity and regularizer.
         Defaults to 0.2
-    n_orient : XXX
+    n_orient : int
+        Number of orientations per source. Defaults to 1
     max_iter : int, optional
         The maximum number of inner loop iterations
     max_iter_reweighting : int, optional
@@ -739,8 +737,9 @@ def champagne(
     ----------
     XXX
     """
+    # XXX alpha and max_iter_reweighting are not used
     assert n_orient != 1, "Only 1 orientation is supported"
-    n_sensors, n_sources = L.shape
+    _, n_sources = L.shape
     _, n_times = y.shape
     gammas = np.ones(n_sources)
     eps = np.finfo(float).eps

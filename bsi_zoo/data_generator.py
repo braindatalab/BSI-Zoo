@@ -1,4 +1,33 @@
 import numpy as np
+from scipy.stats import wishart
+
+
+def _add_noise(cov_type, y, alpha, rng, n_sensors, n_times):
+    noise_type = "random"
+    if cov_type == "diag":
+        if noise_type == "random":
+            # initialization of the noise covariance matrix with a random diagonal matrix
+            rv = wishart(df=n_sensors, scale=1e-3 * np.eye(n_sensors))
+            cov = rv.rvs()
+            cov = np.diag(np.diag(cov))
+        else:
+            # initialization of the noise covariance with an identity matrix
+            cov = 1e-2 * np.diag(np.ones(n_sensors))
+    else:
+        # initialization of the noise covariance matrix with a full PSD random matrix
+        rv = wishart(df=n_sensors, scale=1e-3 * np.eye(n_sensors))
+        cov = rv.rvs()
+
+    signal_norm = np.linalg.norm(y, "fro")
+    noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
+    noise_norm = np.linalg.norm(noise, "fro")
+    noise_normalised = noise / noise_norm
+
+    noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
+    cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
+    y += noise_scaled
+
+    return y, cov_scaled, noise_scaled
 
 
 def get_data(
@@ -12,97 +41,41 @@ def get_data(
     alpha=0.99,  # 40dB snr
     seed=None,
 ):
-    if orientation_type == "fixed":
-        n_orient = 1
-        rng = np.random.RandomState(seed)
-        if path_to_leadfield is not None:
-            lead_field = np.load(path_to_leadfield, allow_pickle=True)
-            L = lead_field["lead_field"]
-            n_sensors, n_sources = L.shape
-        else:
-            L = rng.randn(n_sensors, n_sources)
-
-        x = np.zeros((n_sources, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(nnz, n_times)
-        # x[:nnz] = rng.randn(nnz, n_times)
-        y = L @ x
-
-        noise_type = "random"
-        if cov_type == "diag":
-            if noise_type == "random":
-                # initialization of the noise covariance matrix with a random diagonal matrix
-                cov = rng.randn(n_sensors, n_sensors)
-                cov = 1e-3 * (cov @ cov.T)
-                cov = np.diag(np.diag(cov))
-            else:
-                # initialization of the noise covariance with an identity matrix
-                cov = 1e-2 * np.diag(np.ones(n_sensors))
-        else:
-            # initialization of the noise covariance matrix with a full PSD random matrix
-            cov = rng.randn(n_sensors, n_sensors)
-            cov = 1e-3 * (cov @ cov.T)
-            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
-
-        signal_norm = np.linalg.norm(y, "fro")
-        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-        noise_norm = np.linalg.norm(noise, "fro")
-        noise_normalised = noise / noise_norm
-
-        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
-        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
-        y += noise_scaled
-
-        if n_times == 1:
-            y = y[:, 0]
-            x = x[:, 0]
-
-    elif orientation_type == "free":
-        n_orient = 3
-        rng = np.random.RandomState(seed)
-        if path_to_leadfield is not None:
-            lead_field = np.load(path_to_leadfield, allow_pickle=True)
-            L = lead_field["lead_field"]
-            n_sensors, n_sources, _ = L.shape
-        else:
-            L = rng.randn(n_sensors, n_sources, n_orient)
-
-        x = np.zeros((n_sources, n_orient, n_times))
-        x[rng.randint(low=0, high=x.shape[0], size=nnz)] = rng.randn(
-            nnz, n_orient, n_times
+    n_orient = 3 if orientation_type == "free" else 1
+    rng = np.random.RandomState(seed)
+    if path_to_leadfield is not None:
+        lead_field = np.load(path_to_leadfield, allow_pickle=True)
+        L = lead_field["lead_field"]
+        n_sensors, n_sources = L.shape
+    else:
+        L = (
+            rng.randn(n_sensors, n_sources)
+            if orientation_type == "fixed"
+            else rng.randn(n_sensors, n_sources, n_orient)
         )
+
+    # generate source locations
+    idx = rng.choice(n_sources, size=nnz, replace=False)
+    if orientation_type == "fixed":
+        x = np.zeros((n_sources, n_times))
+        x[idx] = rng.randn(nnz, n_times)
+        y = L @ x
+    elif orientation_type == "free":
+        x = np.zeros((n_sources, n_orient, n_times))
+        x[idx] = rng.randn(nnz, n_orient, n_times)
         y = np.einsum("nmr, mrd->nd", L, x)
 
-        noise_type = "random"
-        if cov_type == "diag":
-            if noise_type == "random":
-                # initialization of the noise covariance matrix with a random diagonal matrix
-                cov = rng.randn(n_sensors, n_sensors)
-                cov = 1e-3 * (cov @ cov.T)
-                cov = np.diag(np.diag(cov))
-            else:
-                # initialization of the noise covariance with an identity matrix
-                cov = 1e-2 * np.diag(np.ones(n_sensors))
-        else:
-            # initialization of the noise covariance matrix with a full PSD random matrix
-            cov = rng.randn(n_sensors, n_sensors)
-            cov = 1e-3 * (cov @ cov.T)
-            # cov = 1e-3 * (cov @ cov.T) / n_times ## devided by the number of time samples for better scaling
+    # add noise
+    y, cov_scaled, noise_scaled = _add_noise(
+        cov_type, y, alpha, rng, n_sensors, n_times
+    )
 
-        signal_norm = np.linalg.norm(y, "fro")
-        noise = rng.multivariate_normal(np.zeros(n_sensors), cov, size=n_times).T
-        noise_norm = np.linalg.norm(noise, "fro")
-        noise_normalised = noise / noise_norm
-
-        alpha = 0.99  # 40dB snr
-        noise_scaled = ((1 - alpha) / alpha) * signal_norm * noise_normalised
-        cov_scaled = cov * (((1 - alpha) / alpha) * (signal_norm / noise_norm)) ** 2
-        y += noise_scaled
-
-        # if n_times == 1:
-        #     y = y[:, 0]
-        #     x = x[:, 0]
-
+    if orientation_type == "free":
         # reshaping L to (n_sensors, n_sources*n_orient)
         L = L.reshape(L.shape[0], -1)
+
+    if n_times == 1 and orientation_type == "fixed":
+        y = y[:, 0]
+        x = x[:, 0]
 
     return y, L, x, cov_scaled, noise_scaled
