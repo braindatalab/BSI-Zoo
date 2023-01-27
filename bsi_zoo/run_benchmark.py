@@ -5,20 +5,20 @@ import pandas as pd
 
 from bsi_zoo.benchmark import Benchmark
 from bsi_zoo.estimators import (
-    # iterative_L1,
+    iterative_L1,
     # iterative_L2,
     # iterative_L1_typeII,
     # iterative_L2_typeII,
-    gamma_map,
+    # gamma_map,
     iterative_sqrt,
 )
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 1
-nruns = 3
+n_jobs = 20
+nruns = 5
 do_spatial_cv = True
-subjects = ["CC120313"]
+subjects = ["CC120313", "CC120166"]
 # ["CC120166", "CC120264"]
 # , "CC120313", "CC120309"]
 metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
@@ -64,13 +64,13 @@ for subject in subjects:
     }
 
     estimators = [
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 
@@ -129,13 +129,13 @@ for subject in subjects:
     }
 
     estimators = [
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 

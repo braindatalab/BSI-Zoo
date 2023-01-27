@@ -46,7 +46,10 @@ def get_data(
     if path_to_leadfield is not None:
         lead_field = np.load(path_to_leadfield, allow_pickle=True)
         L = lead_field["lead_field"]
-        n_sensors, n_sources = L.shape
+        if orientation_type == "fixed":
+            n_sensors, n_sources = L.shape
+        elif orientation_type == "free":
+            n_sensors, n_sources, _ = L.shape
     else:
         L = (
             rng.randn(n_sensors, n_sources)
