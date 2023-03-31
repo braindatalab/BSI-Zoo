@@ -126,7 +126,7 @@ def fake_solver(L, y, alpha, n_orient, **kwargs):
     from sklearn.linear_model import Ridge
 
     estimator = Ridge(alpha=alpha, fit_intercept=False)
-    x = estimator.fit(L, y).coef_
+    x = estimator.fit(L, y).coef_.T
 
     return x
 
