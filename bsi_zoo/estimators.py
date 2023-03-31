@@ -123,10 +123,19 @@ class SpatialSolver(Solver):
 
 
 def fake_solver(L, y, alpha, n_orient, **kwargs):
-    from sklearn.linear_model import Ridge
+    # from sklearn.linear_model import Ridge
 
-    estimator = Ridge(alpha=alpha, fit_intercept=False)
-    x = estimator.fit(L, y).coef_.T
+    # estimator = Ridge(alpha=alpha, fit_intercept=False)
+    # x = estimator.fit(L, y).coef_.T
+
+    depth_prior = 1.0
+    depth_scaling = np.linalg.norm(L, axis=0) ** depth_prior
+    L = L / depth_scaling[np.newaxis, :]
+
+    K = L.T @ np.linalg.inv(L @ L.T + alpha * np.eye(len(L)))
+    x = K @ y
+
+    x /= depth_scaling[:, np.newaxis]
 
     return x
 
