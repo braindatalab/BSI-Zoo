@@ -17,7 +17,7 @@ from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_nois
 from bsi_zoo.config import get_leadfield_path
 
 n_jobs = 10
-nruns = 100
+nruns = 50
 do_spatial_cv = False
 subjects = ["CC120166", "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
@@ -166,6 +166,6 @@ for subject in subjects:
         FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV.pkl"
     else:
         FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
-    # df_results.to_pickle(data_path / FILE_NAME)
+    df_results.to_pickle(data_path / FILE_NAME)
 
     print(df_results)
