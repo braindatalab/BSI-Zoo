@@ -17,11 +17,7 @@ from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_nois
 from bsi_zoo.config import get_leadfield_path
 
 n_jobs = 10
-<<<<<<< HEAD
-nruns = 50
-=======
 nruns = 20
->>>>>>> f8e95962df130ebcbd86e52c6ca92e5f6310b080
 do_spatial_cv = False
 subjects = ["CC120166", "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
