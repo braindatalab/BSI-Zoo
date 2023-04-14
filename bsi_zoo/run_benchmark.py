@@ -17,13 +17,13 @@ from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_nois
 from bsi_zoo.config import get_leadfield_path
 
 n_jobs = 10
-nruns = 100
+nruns = 20
 do_spatial_cv = False
 subjects = ["CC120166", "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
 metrics = [euclidean_distance, mse, emd, f1, reconstructed_noise]  # list of metric functions here
 nnzs = [1, 2, 3, 5]
-alpha_SNR = [0.99, 0.9, 0.8, 0.6, 0.5, 0.4, 0.1]
+alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 # estimator_alphas = [
 #     0.01,
 #     0.01544452,
@@ -166,6 +166,6 @@ for subject in subjects:
         FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV.pkl"
     else:
         FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
-    # df_results.to_pickle(data_path / FILE_NAME)
+    df_results.to_pickle(data_path / FILE_NAME)
 
     print(df_results)
