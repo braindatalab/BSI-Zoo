@@ -17,13 +17,17 @@ from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_nois
 from bsi_zoo.config import get_leadfield_path
 
 n_jobs = 10
+<<<<<<< HEAD
 nruns = 50
+=======
+nruns = 20
+>>>>>>> f8e95962df130ebcbd86e52c6ca92e5f6310b080
 do_spatial_cv = False
 subjects = ["CC120166", "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
 metrics = [euclidean_distance, mse, emd, f1, reconstructed_noise]  # list of metric functions here
 nnzs = [1, 2, 3, 5]
-alpha_SNR = [0.99, 0.9, 0.8, 0.6, 0.5, 0.4, 0.1]
+alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 # estimator_alphas = [
 #     0.01,
 #     0.01544452,
