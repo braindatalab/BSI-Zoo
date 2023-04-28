@@ -59,7 +59,7 @@ def mkfilt_eloreta_v2(L, y, regu=0.05):
     A = np.zeros((nchan, ng, ndum))
     for i in range(ng):
         A[:, i, :] = (Winv[:, :, i] @ ktm[ndum * (i - 1):ndum * i, :]).T
-    return A.T @ y, A
+    return A.T @ y
 
 
 def _solve_lasso(Lw, y, alpha, max_iter):
