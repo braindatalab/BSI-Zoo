@@ -9,6 +9,59 @@ import numpy as np
 from sklearn import linear_model
 
 
+def mkfilt_eloreta_v2(L, y, regu=0.05):
+    # makes spatial filter according to eLoreta
+
+    # input L: NxMxP leadfield tensor for N channels, M voxels, and
+    #       P dipole directions. Typically P=3. (If you do MEG for
+    #       a spherical volume conductor or reduce the rank, you must
+    #       reduce L such that it has full rank for each voxel, such that,
+    #       e.g., P=2)
+    #   regu: optional regularization parameter (default is .05 corresponding
+    #         to 5% of the average of the eigenvalues of some matrix to be inverted.)
+
+    # output A: NxMxP tensor of spatial filters. If x is the Nx1 data vector at time t.
+    #       then A[:,m,p].T @ x is the source activity at time t in voxel m in source direction p.
+
+    # Based on Stefan's MATLAB Code
+
+    nchan, ng, ndum = L.shape
+    LL = np.zeros((nchan, ndum, ng))
+    for i in range(ndum):
+        LL[:, i, :] = L[:, :, i]
+    LL = LL.reshape(nchan, ndum * ng)
+
+    u0 = np.eye(nchan)
+    W = np.tile(np.eye(ndum), (ng, 1, 1)).reshape(ndum, ndum, ng)
+    Winv = np.zeros((ndum, ndum, ng))
+    winvkt = np.zeros((ng * ndum, nchan))
+    kont = 0
+    kk = 0
+    while kont == 0 and kk <= 20:
+        kk += 1
+        for i in range(ng):
+            Winv[:, :, i] = np.linalg.inv(W[:, :, i] + np.trace(W[:, :, i]) / (ndum * 10 ** 6))
+        for i in range(ng):
+            winvkt[ndum * (i - 1) + 1:ndum * i, :] = Winv[:, :, i] @ LL[:, ndum * (i - 1):ndum * i]
+        kwinvkt = LL @ winvkt
+        alpha = regu * np.trace(kwinvkt) / nchan
+        M = np.linalg.inv(kwinvkt + alpha * u0)
+
+        ux, sx, vx = np.linalg.svd(kwinvkt)
+        for i in range(ng):
+            Lloc = L[:, i, :]
+            Wold = W.copy()
+            W[:, :, i] = linalg.sqrtm(Lloc.T @ M @ Lloc)
+        reldef = np.linalg.norm(W - Wold) / np.linalg.norm(Wold)
+        if reldef < 0.000001:
+            kont = 1
+    ktm = LL.T @ M
+    A = np.zeros((nchan, ng, ndum))
+    for i in range(ng):
+        A[:, i, :] = (Winv[:, :, i] @ ktm[ndum * (i - 1):ndum * i, :]).T
+    return A.T @ y, A
+
+
 def _solve_lasso(Lw, y, alpha, max_iter):
     if y.ndim == 1:
         model = linear_model.LassoLars(
