@@ -5,25 +5,25 @@ import pandas as pd
 
 from bsi_zoo.benchmark import Benchmark
 from bsi_zoo.estimators import (
-    iterative_L1,
+    # iterative_L1,
     # iterative_L2,
     # iterative_L1_typeII,
     # iterative_L2_typeII,
     # gamma_map,
-    iterative_sqrt,
+    # iterative_sqrt,
+    fake_solver
 )
-from bsi_zoo.metrics import euclidean_distance, mse, emd, f1
+from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_noise
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 20
-nruns = 5
-do_spatial_cv = True
-subjects = ["CC120313", "CC120166"]
-# ["CC120166", "CC120264"]
-# , "CC120313", "CC120309"]
-metrics = [euclidean_distance, mse, emd, f1]  # list of metric functions here
+n_jobs = 10
+nruns = 20
+do_spatial_cv = False
+subjects = ["CC120166", "CC120313"]
+# , "CC120264", "CC120313", "CC120309"]
+metrics = [euclidean_distance, mse, emd, f1, reconstructed_noise]  # list of metric functions here
 nnzs = [1, 2, 3, 5]
-alpha_SNR = [0.9, 0.8, 0.6, 0.5, 0.4]
+alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 # estimator_alphas = [
 #     0.01,
 #     0.01544452,
@@ -64,9 +64,10 @@ for subject in subjects:
     }
 
     estimators = [
-        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})
+        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
@@ -129,9 +130,10 @@ for subject in subjects:
     }
 
     estimators = [
-        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})
+        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),

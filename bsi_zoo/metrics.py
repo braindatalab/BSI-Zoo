@@ -168,5 +168,24 @@ def nll(x, x_hat, *args, **kwargs):
     cov_y = cov + (L * cov_x[None, :]) @ L.T
     precision_y = np.linalg.inv(cov_y)
     _, logdet = np.linalg.slogdet(precision_y)
-    return (0.5 * (np.trace(precision_y @ cov_y_hat) + logdet) +
-            0.5 * np.log(2 * np.pi) * L.shape[0])
+    return (
+        0.5 * (np.trace(precision_y @ cov_y_hat) + logdet)
+        + 0.5 * np.log(2 * np.pi) * L.shape[0]
+    )
+
+
+def reconstructed_noise(x, x_hat, orientation_type, *args, **kwargs):
+    y = kwargs["y"]
+    L = kwargs["L"]
+
+    if orientation_type == "free":
+        x_hat = x_hat.reshape(x.shape)
+        L = L.reshape(-1, x.shape[0], x.shape[1])
+        noise_hat = y - np.einsum("nmr, mrd->nd", L, x_hat)
+    elif orientation_type == "fixed":
+        noise_hat = y - (L @ x_hat)
+
+    noise_hat_norm = np.linalg.norm(noise_hat, "fro")
+    signal_norm = np.linalg.norm(y, "fro")
+
+    return noise_hat_norm / signal_norm

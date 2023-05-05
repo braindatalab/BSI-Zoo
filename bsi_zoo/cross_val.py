@@ -97,6 +97,7 @@ class SpatialCVSolver(BaseCVSolver):
             scoring="neg_mean_squared_error",
             cv=self.cv,
             n_jobs=self.n_jobs,
+            error_score="raise",
         )
         gs.fit(self.L_, y)
         self.grid_search_ = gs

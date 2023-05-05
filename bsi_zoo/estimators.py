@@ -39,7 +39,7 @@ def _solve_reweighted_lasso(
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):
-                L_j = L_w[:, (j * n_orient) : ((j + 1) * n_orient)]
+                L_j = L_w[:, (j * n_orient): ((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
             coef_, active_set, _ = _mixed_norm_solver_bcd(
                 y,
@@ -123,10 +123,19 @@ class SpatialSolver(Solver):
 
 
 def fake_solver(L, y, alpha, n_orient, **kwargs):
-    from sklearn.linear_model import Ridge
+    # from sklearn.linear_model import Ridge
 
-    estimator = Ridge(alpha=alpha, fit_intercept=False)
-    x = estimator.fit(L, y).coef_
+    # estimator = Ridge(alpha=alpha, fit_intercept=False)
+    # x = estimator.fit(L, y).coef_.T
+
+    depth_prior = 1.0
+    depth_scaling = np.linalg.norm(L, axis=0) ** depth_prior
+    L = L / depth_scaling[np.newaxis, :]
+
+    K = L.T @ np.linalg.inv(L @ L.T + alpha * np.eye(len(L)))
+    x = K @ y
+
+    x /= depth_scaling[:, np.newaxis]
 
     return x
 
