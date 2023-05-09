@@ -2,26 +2,34 @@ from joblib import Memory
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import time
 
 from bsi_zoo.benchmark import Benchmark
 from bsi_zoo.estimators import (
-    # iterative_L1,
-    # iterative_L2,
-    # iterative_L1_typeII,
-    # iterative_L2_typeII,
-    # gamma_map,
-    # iterative_sqrt,
-    fake_solver
+    iterative_L1,
+    iterative_L2,
+    iterative_L1_typeII,
+    iterative_L2_typeII,
+    gamma_map,
+    iterative_sqrt,
+    fake_solver,
 )
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_noise
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 10
-nruns = 20
+n_jobs = 20
+nruns = 3
 do_spatial_cv = False
-subjects = ["CC120166", "CC120313"]
+subjects = ["CC120166"]
+# , "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
-metrics = [euclidean_distance, mse, emd, f1, reconstructed_noise]  # list of metric functions here
+metrics = [
+    euclidean_distance,
+    mse,
+    emd,
+    f1,
+    reconstructed_noise,
+]  # list of metric functions here
 nnzs = [1, 2, 3, 5]
 alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 # estimator_alphas = [
@@ -34,7 +42,7 @@ alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 #     0.13572088,
 #     0.2096144,
 # ]  # logspaced
-estimator_alphas = np.logspace(0, -2.5, 15)[1:]
+estimator_alphas = np.logspace(0, -1, 20)[1:]
 memory = Memory(".")
 
 for subject in subjects:
@@ -64,15 +72,16 @@ for subject in subjects:
     }
 
     estimators = [
-        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})(
+            iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}
+        ),
+        (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 
     df_results = []
@@ -97,9 +106,9 @@ for subject in subjects:
     data_path = Path("bsi_zoo/data")
     data_path.mkdir(exist_ok=True)
     if do_spatial_cv:
-        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV.pkl"
+        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV_{time.strftime('%b-%d-%Y_%H%M', time.localtime())}.pkl"
     else:
-        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
+        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_{time.strftime('%b-%d-%Y_%H%M', time.localtime())}.pkl"
     df_results.to_pickle(data_path / FILE_NAME)
 
     print(df_results)
@@ -130,15 +139,16 @@ for subject in subjects:
     }
 
     estimators = [
-        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})
-        # (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
-        # (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})(
+            iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}
+        ),
+        (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 
     df_results = []
@@ -163,9 +173,9 @@ for subject in subjects:
     data_path = Path("bsi_zoo/data")
     data_path.mkdir(exist_ok=True)
     if do_spatial_cv:
-        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV.pkl"
+        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_spatialCV_{time.strftime('%b-%d-%Y_%H%M', time.localtime())}.pkl"
     else:
-        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}.pkl"
+        FILE_NAME = f"benchmark_data_{subject}_{data_args['orientation_type'][0]}_{time.strftime('%b-%d-%Y_%H%M', time.localtime())}.pkl"
     df_results.to_pickle(data_path / FILE_NAME)
 
     print(df_results)
