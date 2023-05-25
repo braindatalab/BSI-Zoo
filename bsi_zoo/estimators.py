@@ -6,6 +6,10 @@ from scipy.sparse import spdiags
 
 from scipy import linalg
 import numpy as np
+from functools import partial
+import warnings
+from mne.utils import sqrtm_sym, eigh
+from mne.fixes import _safe_svd
 from sklearn import linear_model
 from sklearn.base import BaseEstimator, ClassifierMixin
 
@@ -26,6 +30,172 @@ def _solve_lasso(Lw, y, alpha, max_iter):
     return x
 
 
+def _normalize_R(G, R, G_3, n_nzero, force_equal, n_src, n_orient):
+    """Normalize R so that lambda2 is consistent."""
+    if n_orient == 1 or force_equal:
+        R_Gt = R[:, np.newaxis] * G.T
+    else:
+        R_Gt = np.matmul(R, G_3).reshape(n_src * 3, -1)
+    G_R_Gt = G @ R_Gt
+    norm = np.trace(G_R_Gt) / n_nzero
+    G_R_Gt /= norm
+    R /= norm
+    return G_R_Gt
+
+
+def _get_G_3(G, n_orient):
+    if n_orient == 1:
+        return None
+    else:
+        return G.reshape(G.shape[0], -1, n_orient).transpose(1, 2, 0)
+
+
+def _R_sqrt_mult(other, R_sqrt):
+    """Do other @ R ** 0.5."""
+    if R_sqrt.ndim == 1:
+        assert other.shape[1] == R_sqrt.size
+        out = R_sqrt * other
+    else:
+        assert R_sqrt.shape[1:3] == (3, 3)
+        assert other.shape[1] == np.prod(R_sqrt.shape[:2])
+        assert other.ndim == 2
+        n_src = R_sqrt.shape[0]
+        n_chan = other.shape[0]
+        out = (
+            np.matmul(R_sqrt, other.reshape(n_chan, n_src, 3).transpose(1, 2, 0))
+            .reshape(n_src * 3, n_chan)
+            .T
+        )
+    return out
+
+
+def _compute_reginv2(sing, n_nzero, lambda2):
+    """Safely compute reginv from sing."""
+    sing = np.array(sing, dtype=np.float64)
+    reginv = np.zeros_like(sing)
+    sing = sing[:n_nzero]
+    with np.errstate(invalid="ignore"):  # if lambda2==0
+        reginv[:n_nzero] = np.where(sing > 0, sing / (sing ** 2 + lambda2), 0)
+    return reginv
+
+
+def _compute_orient_prior(G, n_orient, loose=0.9):
+    n_sources = G.shape[1]
+    orient_prior = np.ones(n_sources, dtype=np.float64)
+    if n_orient == 1:
+        return orient_prior
+    orient_prior[::3] *= loose
+    orient_prior[1::3] *= loose
+    return orient_prior
+
+
+def _compute_eloreta_kernel(L, *, lambda2, n_orient, loose=1.0, max_iter=20):
+    """Compute the eLORETA solution."""
+    options = dict(eps=1e-6, max_iter=max_iter, force_equal=False)  # taken from mne
+    eps, max_iter = options["eps"], options["max_iter"]
+    force_equal = bool(options["force_equal"])  # None means False
+
+    G = L
+    n_nzero = G.shape[0]
+
+    # restore orientation prior
+    source_std = np.ones(G.shape[1])
+
+    orient_prior = _compute_orient_prior(G, n_orient, loose=loose)
+    source_std *= np.sqrt(orient_prior)
+
+    G *= source_std
+
+    # We do not multiply by the depth prior, as eLORETA should compensate for
+    # depth bias.
+    _, n_src = G.shape
+    n_src //= n_orient
+
+    assert n_orient in (1, 3)
+
+    # src, sens, 3
+    G_3 = _get_G_3(G, n_orient)
+    if n_orient != 1 and not force_equal:
+        # Outer product
+        R_prior = source_std.reshape(n_src, 1, 3) * source_std.reshape(n_src, 3, 1)
+    else:
+        R_prior = source_std ** 2
+
+    # The following was adapted under BSD license by permission of Guido Nolte
+    if force_equal or n_orient == 1:
+        R_shape = (n_src * n_orient,)
+        R = np.ones(R_shape)
+    else:
+        R_shape = (n_src, n_orient, n_orient)
+        R = np.empty(R_shape)
+        R[:] = np.eye(n_orient)[np.newaxis]
+    R *= R_prior
+    _this_normalize_R = partial(
+        _normalize_R,
+        n_nzero=n_nzero,
+        force_equal=force_equal,
+        n_src=n_src,
+        n_orient=n_orient,
+    )
+    G_R_Gt = _this_normalize_R(G, R, G_3)
+    extra = " (this make take a while)" if n_orient == 3 else ""
+    for kk in range(max_iter):
+        # 1. Compute inverse of the weights (stabilized) and C
+        s, u = eigh(G_R_Gt)
+        s = abs(s)
+        sidx = np.argsort(s)[::-1][:n_nzero]
+        s, u = s[sidx], u[:, sidx]
+        with np.errstate(invalid="ignore"):
+            s = np.where(s > 0, 1 / (s + lambda2), 0)
+        N = np.dot(u * s, u.T)
+        del s
+
+        # Update the weights
+        R_last = R.copy()
+        if n_orient == 1:
+            R[:] = 1.0 / np.sqrt((np.dot(N, G) * G).sum(0))
+        else:
+            M = np.matmul(np.matmul(G_3, N[np.newaxis]), G_3.swapaxes(-2, -1))
+            if force_equal:
+                _, s = sqrtm_sym(M, inv=True)
+                R[:] = np.repeat(1.0 / np.mean(s, axis=-1), 3)
+            else:
+                R[:], _ = sqrtm_sym(M, inv=True)
+        R *= R_prior  # reapply our prior, eLORETA undoes it
+        G_R_Gt = _this_normalize_R(G, R, G_3)
+
+        # Check for weight convergence
+        delta = np.linalg.norm(R.ravel() - R_last.ravel()) / np.linalg.norm(
+            R_last.ravel()
+        )
+        if delta < eps:
+            break
+    else:
+        warnings.warn("eLORETA weight fitting did not converge (>= %s)" % eps)
+    del G_R_Gt
+    G /= source_std  # undo our biasing
+    G_3 = _get_G_3(G, n_orient)
+    _this_normalize_R(G, R, G_3)
+    del G_3
+    if n_orient == 1 or force_equal:
+        R_sqrt = np.sqrt(R)
+    else:
+        R_sqrt = sqrtm_sym(R)[0]
+    assert R_sqrt.shape == R_shape
+    A = _R_sqrt_mult(G, R_sqrt)
+    # del R, G  # the rest will be done in terms of R_sqrt and A
+    eigen_fields, sing, eigen_leads = _safe_svd(A, full_matrices=False)
+    # del A
+    reginv = _compute_reginv2(sing, n_nzero, lambda2)
+    eigen_leads = _R_sqrt_mult(eigen_leads, R_sqrt).T
+    # trans = np.dot(eigen_fields.T, whitener)
+    trans = eigen_fields.T
+    # trans *= reginv[:, None]
+    trans *= reginv
+    K = np.dot(eigen_leads, trans)
+    return K
+
+
 def _solve_reweighted_lasso(
     L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
 ):
@@ -39,7 +209,7 @@ def _solve_reweighted_lasso(
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):
-                L_j = L_w[:, (j * n_orient): ((j + 1) * n_orient)]
+                L_j = L_w[:, (j * n_orient) : ((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
             coef_, active_set, _ = _mixed_norm_solver_bcd(
                 y,
@@ -309,6 +479,13 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
         L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
+    return x
+
+
+def eloreta(L, y, alpha=1 / 9, n_orient=1, max_iter=1000):
+    # alpha is lambda2
+    K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, max_iter=max_iter)
+    x = K @ y  # get the source time courses with simple dot product
     return x
 
 
