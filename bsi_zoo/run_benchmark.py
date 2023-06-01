@@ -17,9 +17,9 @@ from bsi_zoo.estimators import (
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_noise
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 20
-nruns = 3
-do_spatial_cv = False
+n_jobs = 30
+nruns = 1
+do_spatial_cv = True
 subjects = ["CC120166"]
 # , "CC120313"]
 # , "CC120264", "CC120313", "CC120309"]
@@ -42,7 +42,7 @@ alpha_SNR = [0.99, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.01]
 #     0.13572088,
 #     0.2096144,
 # ]  # logspaced
-estimator_alphas = np.logspace(0, -1, 20)[1:]
+estimator_alphas = np.logspace(0, -2, 20)[1:]
 memory = Memory(".")
 
 for subject in subjects:
@@ -79,9 +79,9 @@ for subject in subjects:
         (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 
     df_results = []
@@ -147,7 +147,7 @@ for subject in subjects:
         (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
         (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 

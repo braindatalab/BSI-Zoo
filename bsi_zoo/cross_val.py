@@ -10,6 +10,7 @@ from .estimators import SpatialSolver
 def _logdet(A):
     """Compute the logdet of a positive semidefinite matrix."""
     from scipy import linalg
+
     vals = linalg.eigvalsh(A)
     # avoid negative (numerical errors) or zero (semi-definite matrix) values
     tol = vals.max() * vals.size * np.finfo(np.float64).eps
@@ -28,7 +29,7 @@ def logdet_bregman_div_distance_nll(y, Sigma_Y):
     return out
 
 
-DEFAULT_ALPHA_GRID = np.linspace(1.4, 0.01, 30)
+DEFAULT_ALPHA_GRID = np.logspace(0, -2, 20)[1:]
 
 
 class BaseCVSolver(BaseEstimator, ClassifierMixin):
@@ -135,7 +136,5 @@ class TemporalCVSolver(BaseCVSolver):
                 temporal_cv_scores.append(
                     logdet_bregman_div_distance_nll(y_test, Sigma_Y)
                 )
-            scores.append(
-                np.mean(temporal_cv_scores)
-            )
+            scores.append(np.mean(temporal_cv_scores))
         self.alpha_ = self.alphas[np.argmax((scores))]
