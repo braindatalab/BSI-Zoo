@@ -31,12 +31,12 @@ def _add_noise(cov_type, y, alpha, rng, n_sensors, n_times):
 
 
 def get_data(
-    n_sensors,
-    n_times,
-    n_sources,
-    nnz,
     cov_type,
     path_to_leadfield,
+    n_sensors=50,
+    n_times=10,
+    n_sources=200,
+    nnz=3,
     orientation_type="fixed",
     alpha=0.99,  # 40dB snr
     seed=None,
