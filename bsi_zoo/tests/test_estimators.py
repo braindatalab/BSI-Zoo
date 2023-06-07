@@ -6,6 +6,7 @@ from bsi_zoo.config import get_leadfield_path, get_fwd_fname
 from bsi_zoo.data_generator import get_data
 
 from bsi_zoo.estimators import (
+    eloreta,
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
@@ -24,6 +25,7 @@ from bsi_zoo.estimators import (
 @pytest.mark.parametrize(
     "estimator,alpha,rtol,atol,cov_type,extra_params",
     [
+        (eloreta, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),
@@ -46,7 +48,7 @@ def test_estimator(
     orientation_type,
     extra_params,
     save_estimates=False,
-    seed=42
+    seed=42,
 ):
 
     path_to_leadfield = get_leadfield_path(
