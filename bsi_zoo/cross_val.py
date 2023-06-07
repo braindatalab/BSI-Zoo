@@ -52,6 +52,7 @@ class BaseCVSolver(BaseEstimator, ClassifierMixin):
         self.cv = cv
         self.extra_params = extra_params
         self.n_jobs = n_jobs
+        self.alpha_ = None
 
     def fit(self, L, y):
         self.L_ = L
