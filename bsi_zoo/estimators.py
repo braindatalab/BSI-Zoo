@@ -89,13 +89,13 @@ def _compute_orient_prior(G, n_orient, loose=0.9):
     return orient_prior
 
 
-def _compute_eloreta_kernel(L, *, lambda2, n_orient, loose=1.0, max_iter=20):
+def _compute_eloreta_kernel(L, *, lambda2, n_orient, whitener, loose=1.0, max_iter=20):
     """Compute the eLORETA solution."""
     options = dict(eps=1e-6, max_iter=max_iter, force_equal=False)  # taken from mne
     eps, max_iter = options["eps"], options["max_iter"]
     force_equal = bool(options["force_equal"])  # None means False
 
-    G = L
+    G = whitener @ L
     n_nzero = G.shape[0]
 
     # restore orientation prior
@@ -188,10 +188,8 @@ def _compute_eloreta_kernel(L, *, lambda2, n_orient, loose=1.0, max_iter=20):
     # del A
     reginv = _compute_reginv2(sing, n_nzero, lambda2)
     eigen_leads = _R_sqrt_mult(eigen_leads, R_sqrt).T
-    # trans = np.dot(eigen_fields.T, whitener)
-    trans = eigen_fields.T
-    # trans *= reginv[:, None]
-    trans *= reginv
+    trans = np.dot(eigen_fields.T, whitener)
+    trans *= reginv[:, None]
     K = np.dot(eigen_leads, trans)
     return K
 
@@ -482,9 +480,16 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     return x
 
 
-def eloreta(L, y, alpha=1 / 9, n_orient=1, max_iter=1000):
+def eloreta(y, L, alpha=1 / 9, cov=1, n_orient=1):
+    if isinstance(cov, (float, int)):
+        cov = alpha * np.eye(L.shape[0])
+    # Take care of whitening
+    whitener = linalg.inv(linalg.sqrtm(cov))
+    y = whitener @ y
+    L = whitener @ L
+
     # alpha is lambda2
-    K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, max_iter=max_iter)
+    K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, whitener=whitener)
     x = K @ y  # get the source time courses with simple dot product
     return x
 
