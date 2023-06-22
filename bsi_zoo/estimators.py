@@ -640,7 +640,8 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     return x
 
 
-def eloreta(y, L, alpha=1 / 9, cov=1, n_orient=1):
+def eloreta(L, y, cov=1, alpha=1 / 9, n_orient=1):
+    # def eloreta(L, y cov=1, alpha=1/9, n_orient=1):
     if isinstance(cov, (float, int)):
         cov = alpha * np.eye(L.shape[0])
     # Take care of whitening
