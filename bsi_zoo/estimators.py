@@ -855,17 +855,17 @@ def iterative_L2_typeII(
 
 
 def gamma_map(
-    y,
     L,
+    y,
     cov=1.0,
     alpha=0.2,
+    n_orient=1,
     max_iter=1000,
     tol=1e-15,
     update_mode=2,
     # threshold=1e-5,
     gammas=None,
-    n_orient=1,
-    verbose=False,
+    verbose=True,
 ):
     if isinstance(cov, float):
         cov = alpha * np.eye(L.shape[0])
