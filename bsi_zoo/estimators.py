@@ -652,6 +652,9 @@ def eloreta(L, y, cov=1, alpha=1 / 9, n_orient=1):
     # alpha is lambda2
     K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, whitener=whitener)
     x = K @ y  # get the source time courses with simple dot product
+
+    if n_orient > 1:
+        x = x.reshape((-1, n_orient, x.shape[1]))
     return x
 
 
@@ -887,6 +890,9 @@ def gamma_map(
     )
     x_hat = np.zeros((L.shape[1], y.shape[1]))
     x_hat[active_set] = x_hat_
+
+    if n_orient > 1:
+        x_hat = x_hat.reshape((-1, n_orient, x_hat.shape[1]))
 
     return x_hat
 
