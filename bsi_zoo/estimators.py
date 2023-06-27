@@ -138,7 +138,7 @@ def _compute_eloreta_kernel(L, *, lambda2, n_orient, whitener, loose=1.0, max_it
         n_orient=n_orient,
     )
     G_R_Gt = _this_normalize_R(G, R, G_3)
-    extra = " (this make take a while)" if n_orient == 3 else ""
+    # extra = " (this make take a while)" if n_orient == 3 else ""
     for kk in range(max_iter):
         # 1. Compute inverse of the weights (stabilized) and C
         s, u = eigh(G_R_Gt)
