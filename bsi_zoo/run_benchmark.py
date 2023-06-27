@@ -13,11 +13,12 @@ from bsi_zoo.estimators import (
     gamma_map,
     iterative_sqrt,
     fake_solver,
+    eloreta,
 )
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_noise
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 30
+n_jobs = 1
 nruns = 1
 do_spatial_cv = True
 subjects = ["CC120166"]
@@ -50,9 +51,9 @@ for subject in subjects:
 
     orientation_type = "fixed"
     data_args_I = {
-        "n_sensors": [50],
+        # "n_sensors": [50],
         "n_times": [10],
-        "n_sources": [200],
+        # "n_sources": [200],
         "nnz": nnzs,
         "cov_type": ["diag"],
         "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
@@ -61,9 +62,9 @@ for subject in subjects:
     }
 
     data_args_II = {
-        "n_sensors": [50],
+        # "n_sensors": [50],
         "n_times": [10],
-        "n_sources": [200],
+        # "n_sources": [200],
         "nnz": nnzs,
         "cov_type": ["full"],
         "path_to_leadfield": [get_leadfield_path(subject, type=orientation_type)],
@@ -72,9 +73,9 @@ for subject in subjects:
     }
 
     estimators = [
-        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})(
-            iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}
-        ),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {}),
+        (eloreta, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
@@ -139,16 +140,16 @@ for subject in subjects:
     }
 
     estimators = [
-        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {})(
-            iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}
-        ),
+        (fake_solver, data_args_I, {"alpha": estimator_alphas}, {}),
+        (eloreta, data_args_I, {"alpha": estimator_alphas}, {}),
+        (iterative_L1, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_L2, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_sqrt, data_args_I, {"alpha": estimator_alphas}, {}),
         (iterative_L1_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
         (iterative_L2_typeII, data_args_II, {"alpha": estimator_alphas}, {}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
-        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
-        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 1}),
+        (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 2}),
+        # (gamma_map, data_args_II, {"alpha": estimator_alphas}, {"update_mode": 3}),
     ]
 
     df_results = []
