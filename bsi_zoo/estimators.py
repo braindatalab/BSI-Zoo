@@ -6,6 +6,10 @@ from scipy.sparse import spdiags
 
 from scipy import linalg
 import numpy as np
+from functools import partial
+import warnings
+from mne.utils import sqrtm_sym, eigh
+from mne.fixes import _safe_svd
 from sklearn import linear_model
 from sklearn.base import BaseEstimator, ClassifierMixin
 
@@ -24,6 +28,170 @@ def _solve_lasso(Lw, y, alpha, max_iter):
         x = model.fit(Lw, y).coef_.copy()
         x = x.T
     return x
+
+
+def _normalize_R(G, R, G_3, n_nzero, force_equal, n_src, n_orient):
+    """Normalize R so that lambda2 is consistent."""
+    if n_orient == 1 or force_equal:
+        R_Gt = R[:, np.newaxis] * G.T
+    else:
+        R_Gt = np.matmul(R, G_3).reshape(n_src * 3, -1)
+    G_R_Gt = G @ R_Gt
+    norm = np.trace(G_R_Gt) / n_nzero
+    G_R_Gt /= norm
+    R /= norm
+    return G_R_Gt
+
+
+def _get_G_3(G, n_orient):
+    if n_orient == 1:
+        return None
+    else:
+        return G.reshape(G.shape[0], -1, n_orient).transpose(1, 2, 0)
+
+
+def _R_sqrt_mult(other, R_sqrt):
+    """Do other @ R ** 0.5."""
+    if R_sqrt.ndim == 1:
+        assert other.shape[1] == R_sqrt.size
+        out = R_sqrt * other
+    else:
+        assert R_sqrt.shape[1:3] == (3, 3)
+        assert other.shape[1] == np.prod(R_sqrt.shape[:2])
+        assert other.ndim == 2
+        n_src = R_sqrt.shape[0]
+        n_chan = other.shape[0]
+        out = (
+            np.matmul(R_sqrt, other.reshape(n_chan, n_src, 3).transpose(1, 2, 0))
+            .reshape(n_src * 3, n_chan)
+            .T
+        )
+    return out
+
+
+def _compute_reginv2(sing, n_nzero, lambda2):
+    """Safely compute reginv from sing."""
+    sing = np.array(sing, dtype=np.float64)
+    reginv = np.zeros_like(sing)
+    sing = sing[:n_nzero]
+    with np.errstate(invalid="ignore"):  # if lambda2==0
+        reginv[:n_nzero] = np.where(sing > 0, sing / (sing ** 2 + lambda2), 0)
+    return reginv
+
+
+def _compute_orient_prior(G, n_orient, loose=0.9):
+    n_sources = G.shape[1]
+    orient_prior = np.ones(n_sources, dtype=np.float64)
+    if n_orient == 1:
+        return orient_prior
+    orient_prior[::3] *= loose
+    orient_prior[1::3] *= loose
+    return orient_prior
+
+
+def _compute_eloreta_kernel(L, *, lambda2, n_orient, whitener, loose=1.0, max_iter=20):
+    """Compute the eLORETA solution."""
+    options = dict(eps=1e-6, max_iter=max_iter, force_equal=False)  # taken from mne
+    eps, max_iter = options["eps"], options["max_iter"]
+    force_equal = bool(options["force_equal"])  # None means False
+
+    G = whitener @ L
+    n_nzero = G.shape[0]
+
+    # restore orientation prior
+    source_std = np.ones(G.shape[1])
+
+    orient_prior = _compute_orient_prior(G, n_orient, loose=loose)
+    source_std *= np.sqrt(orient_prior)
+
+    G *= source_std
+
+    # We do not multiply by the depth prior, as eLORETA should compensate for
+    # depth bias.
+    _, n_src = G.shape
+    n_src //= n_orient
+
+    assert n_orient in (1, 3)
+
+    # src, sens, 3
+    G_3 = _get_G_3(G, n_orient)
+    if n_orient != 1 and not force_equal:
+        # Outer product
+        R_prior = source_std.reshape(n_src, 1, 3) * source_std.reshape(n_src, 3, 1)
+    else:
+        R_prior = source_std ** 2
+
+    # The following was adapted under BSD license by permission of Guido Nolte
+    if force_equal or n_orient == 1:
+        R_shape = (n_src * n_orient,)
+        R = np.ones(R_shape)
+    else:
+        R_shape = (n_src, n_orient, n_orient)
+        R = np.empty(R_shape)
+        R[:] = np.eye(n_orient)[np.newaxis]
+    R *= R_prior
+    _this_normalize_R = partial(
+        _normalize_R,
+        n_nzero=n_nzero,
+        force_equal=force_equal,
+        n_src=n_src,
+        n_orient=n_orient,
+    )
+    G_R_Gt = _this_normalize_R(G, R, G_3)
+    # extra = " (this make take a while)" if n_orient == 3 else ""
+    for kk in range(max_iter):
+        # 1. Compute inverse of the weights (stabilized) and C
+        s, u = eigh(G_R_Gt)
+        s = abs(s)
+        sidx = np.argsort(s)[::-1][:n_nzero]
+        s, u = s[sidx], u[:, sidx]
+        with np.errstate(invalid="ignore"):
+            s = np.where(s > 0, 1 / (s + lambda2), 0)
+        N = np.dot(u * s, u.T)
+        del s
+
+        # Update the weights
+        R_last = R.copy()
+        if n_orient == 1:
+            R[:] = 1.0 / np.sqrt((np.dot(N, G) * G).sum(0))
+        else:
+            M = np.matmul(np.matmul(G_3, N[np.newaxis]), G_3.swapaxes(-2, -1))
+            if force_equal:
+                _, s = sqrtm_sym(M, inv=True)
+                R[:] = np.repeat(1.0 / np.mean(s, axis=-1), 3)
+            else:
+                R[:], _ = sqrtm_sym(M, inv=True)
+        R *= R_prior  # reapply our prior, eLORETA undoes it
+        G_R_Gt = _this_normalize_R(G, R, G_3)
+
+        # Check for weight convergence
+        delta = np.linalg.norm(R.ravel() - R_last.ravel()) / np.linalg.norm(
+            R_last.ravel()
+        )
+        if delta < eps:
+            break
+    else:
+        warnings.warn("eLORETA weight fitting did not converge (>= %s)" % eps)
+    del G_R_Gt
+    G /= source_std  # undo our biasing
+    G_3 = _get_G_3(G, n_orient)
+    _this_normalize_R(G, R, G_3)
+    del G_3
+    if n_orient == 1 or force_equal:
+        R_sqrt = np.sqrt(R)
+    else:
+        R_sqrt = sqrtm_sym(R)[0]
+    assert R_sqrt.shape == R_shape
+    A = _R_sqrt_mult(G, R_sqrt)
+    # del R, G  # the rest will be done in terms of R_sqrt and A
+    eigen_fields, sing, eigen_leads = _safe_svd(A, full_matrices=False)
+    # del A
+    reginv = _compute_reginv2(sing, n_nzero, lambda2)
+    eigen_leads = _R_sqrt_mult(eigen_leads, R_sqrt).T
+    trans = np.dot(eigen_fields.T, whitener)
+    trans *= reginv[:, None]
+    K = np.dot(eigen_leads, trans)
+    return K
 
 
 def _solve_reweighted_lasso(
@@ -68,6 +236,166 @@ def _solve_reweighted_lasso(
         weights = gprime(x)
 
     return x
+
+
+def _gamma_map_opt(
+    M,
+    G,
+    alpha,
+    maxit=10000,
+    tol=1e-6,
+    update_mode=1,
+    group_size=1,
+    gammas=None,
+    verbose=None,
+):
+    """Hierarchical Bayes (Gamma-MAP).
+
+    Parameters
+    ----------
+    M : array, shape=(n_sensors, n_times)
+        Observation.
+    G : array, shape=(n_sensors, n_sources)
+        Forward operator.
+    alpha : float
+        Regularization parameter (noise variance).
+    maxit : int
+        Maximum number of iterations.
+    tol : float
+        Tolerance parameter for convergence.
+    group_size : int
+        Number of consecutive sources which use the same gamma.
+    update_mode : int
+        Update mode, 1: MacKay update (default), 3: Modified MacKay update.
+    gammas : array, shape=(n_sources,)
+        Initial values for posterior variances (gammas). If None, a
+        variance of 1.0 is used.
+    %(verbose)s
+
+    Returns
+    -------
+    X : array, shape=(n_active, n_times)
+        Estimated source time courses.
+    active_set : array, shape=(n_active,)
+        Indices of active sources.
+    """
+    from scipy import linalg
+
+    G = G.copy()
+    M = M.copy()
+
+    if gammas is None:
+        gammas = np.ones(G.shape[1], dtype=np.float64)
+
+    eps = np.finfo(float).eps
+
+    n_sources = G.shape[1]
+    n_sensors, n_times = M.shape
+
+    # apply normalization so the numerical values are sane
+    M_normalize_constant = np.linalg.norm(np.dot(M, M.T), ord="fro")
+    M /= np.sqrt(M_normalize_constant)
+    alpha /= M_normalize_constant
+    G_normalize_constant = np.linalg.norm(G, ord=np.inf)
+    G /= G_normalize_constant
+
+    if n_sources % group_size != 0:
+        raise ValueError(
+            "Number of sources has to be evenly dividable by the " "group size"
+        )
+
+    n_active = n_sources
+    active_set = np.arange(n_sources)
+
+    gammas_full_old = gammas.copy()
+
+    if update_mode == 2:
+        denom_fun = np.sqrt
+    else:
+        # do nothing
+        def denom_fun(x):
+            return x
+
+    last_size = -1
+    for itno in range(maxit):
+        gammas[np.isnan(gammas)] = 0.0
+
+        gidx = np.abs(gammas) > eps
+        active_set = active_set[gidx]
+        gammas = gammas[gidx]
+
+        # update only active gammas (once set to zero it stays at zero)
+        if n_active > len(active_set):
+            n_active = active_set.size
+            G = G[:, gidx]
+
+        CM = np.dot(G * gammas[np.newaxis, :], G.T)
+        CM.flat[:: n_sensors + 1] += alpha
+        # Invert CM keeping symmetry
+        U, S, _ = linalg.svd(CM, full_matrices=False)
+        S = S[np.newaxis, :]
+        del CM
+        CMinv = np.dot(U / (S + eps), U.T)
+        CMinvG = np.dot(CMinv, G)
+        A = np.dot(CMinvG.T, M)  # mult. w. Diag(gamma) in gamma update
+
+        if update_mode == 1:
+            # MacKay fixed point update (10) in [1]
+            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1)
+            denom = gammas * np.sum(G * CMinvG, axis=0)
+        elif update_mode == 2:
+            # modified MacKay fixed point update (11) in [1]
+            numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
+            denom = np.sum(G * CMinvG, axis=0)  # sqrt is applied below
+        else:
+            raise ValueError("Invalid value for update_mode")
+
+        if group_size == 1:
+            if denom is None:
+                gammas = numer
+            else:
+                gammas = numer / np.maximum(denom_fun(denom), np.finfo("float").eps)
+        else:
+            numer_comb = np.sum(numer.reshape(-1, group_size), axis=1)
+            if denom is None:
+                gammas_comb = numer_comb
+            else:
+                denom_comb = np.sum(denom.reshape(-1, group_size), axis=1)
+                gammas_comb = numer_comb / denom_fun(denom_comb)
+
+            gammas = np.repeat(gammas_comb / group_size, group_size)
+
+        # compute convergence criterion
+        gammas_full = np.zeros(n_sources, dtype=np.float64)
+        gammas_full[active_set] = gammas
+
+        err = np.sum(np.abs(gammas_full - gammas_full_old)) / np.sum(
+            np.abs(gammas_full_old)
+        )
+
+        gammas_full_old = gammas_full
+
+        breaking = err < tol or n_active == 0
+        if len(gammas) != last_size or breaking:
+            logger.info(
+                "Iteration: %d\t active set size: %d\t convergence: "
+                "%0.3e" % (itno, len(gammas), err)
+            )
+            last_size = len(gammas)
+
+        if breaking:
+            break
+
+    if itno < maxit - 1:
+        logger.info("\nConvergence reached !\n")
+    else:
+        warn("\nConvergence NOT reached !\n")
+
+    # undo normalization and compute final posterior mean
+    n_const = np.sqrt(M_normalize_constant) / G_normalize_constant
+    x_active = n_const * gammas[:, None] * A
+
+    return x_active, active_set
 
 
 class Solver(BaseEstimator, ClassifierMixin):
@@ -312,6 +640,24 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     return x
 
 
+def eloreta(L, y, cov=1, alpha=1 / 9, n_orient=1):
+    # def eloreta(L, y cov=1, alpha=1/9, n_orient=1):
+    if isinstance(cov, (float, int)):
+        cov = alpha * np.eye(L.shape[0])
+    # Take care of whitening
+    whitener = linalg.inv(linalg.sqrtm(cov))
+    y = whitener @ y
+    L = whitener @ L
+
+    # alpha is lambda2
+    K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, whitener=whitener)
+    x = K @ y  # get the source time courses with simple dot product
+
+    if n_orient > 1:
+        x = x.reshape((-1, n_orient, x.shape[1]))
+    return x
+
+
 def iterative_L1_typeII(
     L, y, cov, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10
 ):
@@ -517,208 +863,38 @@ def gamma_map(
     y,
     cov=1.0,
     alpha=0.2,
+    n_orient=1,
     max_iter=1000,
     tol=1e-15,
     update_mode=2,
-    threshold=1e-5,
+    # threshold=1e-5,
     gammas=None,
-    n_orient=1,
+    verbose=True,
 ):
-    """Gamma_map method based on MNE package
-
-    Parameters
-    ----------
-    L : array, shape (n_sensors, n_sources)
-        lead field matrix modeling the forward operator or dictionary matrix
-    y : array, shape (n_sensors,)
-        measurement vector, capturing sensor measurements
-    cov : float | array, shape (n_sensors, n_sensors)
-        noise covariance matrix. If float it corresponds to the noise variance
-        assumed to be diagonal.
-    alpha : float
-        Constant that makes a trade-off between the data fidelity and regularizer.
-        Defaults to 0.2
-    max_iter : int, optional
-        The maximum number iterations. Defaults to 1000.
-    tol : float
-        Tolerance parameter for convergence.
-    update_mode : int
-        Update mode, 1: MacKay update, 2: Convex-bounding update (defaul),
-        3: Expectation-Maximization update
-    threshold : float
-        A threshold paramter for forcing to zero the small values in
-        reconstrcuted gamma in each iteration
-    gammas : array, shape=(n_sources,)
-        Initial values for posterior variances (gammas). If None, a
-        variance of 1.0 is used.
-    n_orient : int
-        Number of consecutive sources which use the same gamma.
-
-    Returns
-    -------
-    x : array, shape (n_sources,)
-        Parameter vector, e.g., source vector in the context of BSI (x in the cost
-        function formula).
-
-    References
-    ----------
-    XXX
-    """
-    group_size = n_orient  # for compatibility with MNE implementation
-    eps = np.finfo(float).eps
-    n_sensors, n_sources = L.shape
-    if y.ndim < 2:
-        y = y[:, np.newaxis]
-    n_times = y.shape[1]
-    coef = np.zeros((n_sources, n_times))
-
     if isinstance(cov, float):
-        cov = cov * np.eye(n_sensors)
+        cov = alpha * np.eye(L.shape[0])
+    # Take care of whitening
+    whitener = linalg.inv(linalg.sqrtm(cov))
+    y = whitener @ y
+    L = whitener @ L
+    x_hat_, active_set = _gamma_map_opt(
+        y,
+        L,
+        alpha=alpha,
+        tol=tol,
+        maxit=max_iter,
+        gammas=gammas,
+        update_mode=update_mode,
+        group_size=n_orient,
+        verbose=verbose,
+    )
+    x_hat = np.zeros((L.shape[1], y.shape[1]))
+    x_hat[active_set] = x_hat_
 
-    # alpha = mean(np.diag(cov)) accept alpha from params instead
+    if n_orient > 1:
+        x_hat = x_hat.reshape((-1, n_orient, x_hat.shape[1]))
 
-    if gammas is None:
-        gammas = np.ones(L.shape[1])
-        # L_square = np.sum(L ** 2,axis=0)
-        # inv_L_square = np.zeros(n_sources)
-        # L_nonzero_index = L_square > 0
-        # inv_L_square[L_nonzero_index] = 1.0 / L_square[L_nonzero_index]
-        # w_filter = spdiags(inv_L_square, 0, n_sources, n_sources) @ L.T
-        # vec_init = mean(mean(w_filter @ y) ** 2)
-        # gammas = vec_init * np.ones(L.shape[1])
-
-    # # # apply normalization so the numerical values are sane
-    # y_normalize_constant = np.linalg.norm(np.dot(y, y.T), ord='fro')
-    # y /= np.sqrt(y_normalize_constant)
-    # alpha /= y_normalize_constant
-    # cov /= y_normalize_constant
-    # L_normalize_constant = np.linalg.norm(L, ord=np.inf)
-    # L /= L_normalize_constant
-
-    threshold = 0.2 * mean(np.diag(cov))
-
-    if n_sources % group_size != 0:
-        raise ValueError(
-            "Number of sources has to be evenly dividable by the " "group size"
-        )
-
-    n_active = n_sources
-    active_set = np.arange(n_sources)
-
-    gammas_full_old = gammas.copy()
-    # x_bar_old = coef
-
-    if update_mode == 2:
-        denom_fun = np.sqrt
-    elif update_mode == 1:
-        # do nothing
-        def denom_fun(x):
-            return x
-
-    elif update_mode == 3:
-        denom = None
-    else:
-        denom = None
-
-    last_size = -1
-    for iter_no in range(max_iter):
-        gammas[np.isnan(gammas)] = 0.0
-        gidx = np.abs(gammas) > threshold
-        active_set = active_set[gidx]
-        gammas = gammas[gidx]
-
-        # update only active gammas (once set to zero it stays at zero)
-        if n_active > len(active_set):
-            n_active = active_set.size
-            L = L[:, gidx]
-
-        Sigma_y = np.dot(L * gammas[np.newaxis, :], L.T)
-        Sigma_y.flat[:: n_sensors + 1] += alpha
-        # Sigma_y += cov
-
-        # Invert CM keeping symmetry
-        U, S, _ = linalg.svd(Sigma_y, full_matrices=False)
-        S = S[np.newaxis, :]
-        del Sigma_y
-
-        Sigma_y_inv = np.dot(U / (S + eps), U.T)
-        Sigma_y_invL = np.dot(Sigma_y_inv, L)
-        A = np.dot(Sigma_y_invL.T, y)  # mult. w. Diag(gamma) in gamma update
-
-        if update_mode == 1:
-            # MacKay fixed point update
-            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1)
-            denom = gammas * np.sum(L * Sigma_y_invL, axis=0)
-        elif update_mode == 2:
-            # convex-bounding update
-            numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
-            denom = np.sum(L * Sigma_y_invL, axis=0)  # sqrt is applied below
-        elif update_mode == 3:
-            # Expectation Maximization (EM) update
-            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) + gammas * (
-                1 - gammas * np.sum(L * Sigma_y_invL, axis=0)
-            )
-        else:
-            raise ValueError("Invalid value for update_mode")
-
-        if group_size == 1:
-            if denom is None:
-                gammas = numer
-            else:
-                gammas = numer / np.maximum(denom_fun(denom), np.finfo("float").eps)
-        else:
-            numer_comb = np.sum(numer.reshape(-1, group_size), axis=1)
-            if denom is None:
-                gammas_comb = numer_comb
-            else:
-                denom_comb = np.sum(denom.reshape(-1, group_size), axis=1)
-                gammas_comb = numer_comb / denom_fun(denom_comb)
-
-            gammas = np.repeat(gammas_comb / group_size, group_size)
-
-        # compute convergence criterion
-        gammas_full = np.zeros(n_sources, dtype=np.float64)
-        gammas_full[active_set] = gammas
-
-        # compute the noise covariance
-        err = np.sum(np.abs(gammas_full - gammas_full_old)) / np.sum(
-            np.abs(gammas_full_old)
-        )
-
-        # err_x = linalg.norm(x_bar - x_bar_old, ord = 'fro')
-        # print(err_x)
-
-        gammas_full_old = gammas_full
-
-        breaking = err < tol or n_active == 0
-        if len(gammas) != last_size or breaking:
-            logger.info(
-                "Iteration: %d\t active set size: %d\t convergence: "
-                "%0.3e" % (iter_no, len(gammas), err)
-            )
-            last_size = len(gammas)
-
-        if breaking:
-            break
-
-    if iter_no < max_iter - 1:
-        logger.info("\nConvergence reached !\n")
-    else:
-        warn("\nConvergence NOT reached !\n")
-
-    # undo normalization and compute final posterior mean
-
-    # n_const = np.sqrt(y_normalize_constant) / L_normalize_constant
-    n_const = 1
-    x_active = n_const * gammas[:, None] * A
-
-    coef[active_set, :] = x_active
-    if n_times == 1:
-        # x = np.squeeze(coef,axis = 1)
-        x = coef[:, 0]
-    else:
-        x = coef
-    return x
+    return x_hat
 
 
 def champagne(
