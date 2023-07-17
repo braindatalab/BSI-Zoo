@@ -347,6 +347,12 @@ def _gamma_map_opt(
             # modified MacKay fixed point update (11) in [1]
             numer = gammas * np.sqrt(np.mean((A * A.conj()).real, axis=1))
             denom = np.sum(G * CMinvG, axis=0)  # sqrt is applied below
+        elif update_mode == 3:
+            # Expectation Maximization (EM) update
+            denom = None
+            numer = gammas ** 2 * np.mean((A * A.conj()).real, axis=1) + gammas * (
+                1 - gammas * np.sum(G * CMinvG, axis=0)
+            )
         else:
             raise ValueError("Invalid value for update_mode")
 
