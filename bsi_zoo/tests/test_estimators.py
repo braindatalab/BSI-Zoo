@@ -7,6 +7,7 @@ from bsi_zoo.data_generator import get_data
 
 from bsi_zoo.estimators import (
     eloreta,
+    mce,
     iterative_L1,
     iterative_L2,
     iterative_sqrt,
@@ -26,6 +27,7 @@ from bsi_zoo.estimators import (
     "estimator,alpha,rtol,atol,cov_type,extra_params",
     [
         (eloreta, 0.1, 1e-1, 5e-1, "diag", {}),
+        (mce, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L1, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_L2, 0.1, 1e-1, 5e-1, "diag", {}),
         (iterative_sqrt, 0.1, 1e-1, 5e-1, "diag", {}),

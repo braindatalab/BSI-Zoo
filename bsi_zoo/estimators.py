@@ -207,7 +207,7 @@ def _solve_reweighted_lasso(
             n_positions = L_w.shape[1] // n_orient
             lc = np.empty(n_positions)
             for j in range(n_positions):
-                L_j = L_w[:, (j * n_orient): ((j + 1) * n_orient)]
+                L_j = L_w[:, (j * n_orient) : ((j + 1) * n_orient)]
                 lc[j] = np.linalg.norm(np.dot(L_j.T, L_j), ord=2)
             coef_, active_set, _ = _mixed_norm_solver_bcd(
                 y,
@@ -244,7 +244,7 @@ def _gamma_map_opt(
     alpha,
     maxit=10000,
     tol=1e-6,
-    update_mode=1,
+    update_mode=2,
     group_size=1,
     gammas=None,
     verbose=None,
@@ -464,6 +464,63 @@ def fake_solver(L, y, alpha, n_orient, **kwargs):
     x = K @ y
 
     x /= depth_scaling[:, np.newaxis]
+
+    return x
+
+
+def mce(L, y, alpha=0.2, n_orient=1, max_iter=1, max_iter_reweighting=10):
+    """Iterative Type-I estimator with L1 regularizer with 1 iteration.
+
+    The optimization objective for iterative estimators in general is::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i g(x_i)
+    Which in the case of iterative L1, it boils down to::
+        x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+    Iterative L1::
+        g(x_i) = log(|x_i| + epsilon)
+        w_i^(k+1) <-- [|x_i^(k)|+epsilon]
+
+    Parameters
+    ----------
+    L : array, shape (n_sensors, n_sources)
+        lead field matrix modeling the forward operator or dictionary matrix
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
+        measurement vector, capturing sensor measurements
+    alpha : float
+        Constant that makes a trade-off between the data fidelity and regularizer.
+        Defaults to 0.2.
+    n_orient : int
+        Number of dipoles per location (typically 1 or 3).
+    max_iter : int, optional
+        The maximum number of inner loop iterations. 1 for this method.
+    max_iter_reweighting : int, optional
+        Maximum number of reweighting steps i.e outer loop iterations. Defaults to 10.
+
+    Returns
+    -------
+    y : array, shape (n_sensors,) or (n_sensors, n_times)
+        Parameter vector, e.g., source vector in the context of BSI (x in the cost
+        function formula).
+
+    References
+    ----------
+    [1] Candes, Wakin, Boyd, "Enhancing Sparsity by Reweighted l1 Minimization",
+    J Fourier Anal Appl (2008) 14: 877–905
+    https://web.stanford.edu/~boyd/papers/pdf/rwl1.pdf
+    """
+    eps = np.finfo(float).eps
+    _, n_sources = L.shape
+    weights = np.ones(n_sources)
+
+    def gprime(w):
+        grp_norms = np.sqrt(groups_norm2(w.copy(), n_orient))
+        return np.repeat(grp_norms, n_orient).ravel() + eps
+
+    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    alpha = alpha * alpha_max
+
+    x = _solve_reweighted_lasso(
+        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
+    )
 
     return x
 
