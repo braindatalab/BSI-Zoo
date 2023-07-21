@@ -84,6 +84,7 @@ def _run_estimator(
         # catch error message and store it
         this_results["error"] = e
     this_results.update(this_data_args)
+    this_results.update({"extra_params": extra_params})
     this_results.update({f"estimator__{k}": v for k, v in this_estimator_args.items()})
     if do_spatial_cv:
         this_results.update({"estimator__alpha_cv": estimator_.alpha_})
