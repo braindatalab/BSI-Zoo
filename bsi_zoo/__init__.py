@@ -16,4 +16,4 @@
 # Dev branch marker is: 'X.Y.devN' where N is an integer.
 #
 
-__version__ = "2.0"
+__version__ = 0.1.0
