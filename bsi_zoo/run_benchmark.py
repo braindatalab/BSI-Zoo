@@ -21,7 +21,8 @@ from bsi_zoo.config import get_leadfield_path
 n_jobs = 10
 nruns = 10
 spatial_cv = [False, True]
-subjects = ["CC120166", "CC120313", "CC120264", "CC120313", "CC120309"]
+subjects = ["CC120264", "CC120313", "CC120309"]
+# "CC120166", "CC120313",
 metrics = [
     euclidean_distance,
     mse,
