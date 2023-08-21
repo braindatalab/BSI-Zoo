@@ -18,7 +18,7 @@ from bsi_zoo.estimators import (
 from bsi_zoo.metrics import euclidean_distance, mse, emd, f1, reconstructed_noise
 from bsi_zoo.config import get_leadfield_path
 
-n_jobs = 10
+n_jobs = 30
 nruns = 10
 spatial_cv = [False, True]
 subjects = ["CC120264", "CC120313", "CC120309"]
