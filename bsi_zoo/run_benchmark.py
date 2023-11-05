@@ -101,12 +101,11 @@ for do_spatial_cv in spatial_cv:
             )
             results = benchmark.run(nruns=nruns)
             df_results.append(results)
-             # save results
+            # save results
             data_path = Path("bsi_zoo/data")
             data_path.mkdir(exist_ok=True)
             FILE_NAME = f"{estimator}_{subject}_{data_args['orientation_type'][0]}_{time.strftime('%b-%d-%Y_%H%M', time.localtime())}.pkl"
             results.to_pickle(data_path / FILE_NAME)
-
 
         df_results = pd.concat(df_results, axis=0)
 
