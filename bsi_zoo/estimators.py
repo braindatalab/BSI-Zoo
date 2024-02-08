@@ -412,6 +412,7 @@ class Solver(BaseEstimator, ClassifierMixin):
         self.cov_type = cov_type
         self.n_orient = n_orient
         self.extra_params = extra_params
+        self.classes_ = np.array([0, 0])
 
     def fit(self, L, y):
         self.L_ = L
@@ -716,8 +717,8 @@ def eloreta(L, y, cov=1, alpha=1 / 9, n_orient=1):
     K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, whitener=whitener)
     x = K @ y  # get the source time courses with simple dot product
 
-    if n_orient > 1:
-        x = x.reshape((-1, n_orient, x.shape[1]))
+    # if n_orient > 1:
+        # x = x.reshape((-1, n_orient, x.shape[1]))
     return x
 
 
