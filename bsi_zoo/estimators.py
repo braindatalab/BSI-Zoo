@@ -139,7 +139,7 @@ def _compute_eloreta_kernel(L, *, lambda2, n_orient, whitener, loose=1.0, max_it
     )
     G_R_Gt = _this_normalize_R(G, R, G_3)
     # extra = " (this make take a while)" if n_orient == 3 else ""
-    for kk in range(max_iter):
+    for _ in range(max_iter):
         # 1. Compute inverse of the weights (stabilized) and C
         s, u = eigh(G_R_Gt)
         s = abs(s)
@@ -171,7 +171,7 @@ def _compute_eloreta_kernel(L, *, lambda2, n_orient, whitener, loose=1.0, max_it
         if delta < eps:
             break
     else:
-        warnings.warn("eLORETA weight fitting did not converge (>= %s)" % eps)
+        warnings.warn("eLORETA weight fitting did not converge (>= %s)" % eps, UserWarning, stacklevel=2)
     del G_R_Gt
     G /= source_std  # undo our biasing
     G_3 = _get_G_3(G, n_orient)
@@ -412,6 +412,7 @@ class Solver(BaseEstimator, ClassifierMixin):
         self.cov_type = cov_type
         self.n_orient = n_orient
         self.extra_params = extra_params
+        self.classes_ = np.array([0, 0])
 
     def fit(self, L, y):
         self.L_ = L
@@ -716,8 +717,8 @@ def eloreta(L, y, cov=1, alpha=1 / 9, n_orient=1):
     K = _compute_eloreta_kernel(L, lambda2=alpha, n_orient=n_orient, whitener=whitener)
     x = K @ y  # get the source time courses with simple dot product
 
-    if n_orient > 1:
-        x = x.reshape((-1, n_orient, x.shape[1]))
+    # if n_orient > 1:
+        # x = x.reshape((-1, n_orient, x.shape[1]))
     return x
 
 
