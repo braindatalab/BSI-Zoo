@@ -253,7 +253,7 @@ def _gamma_map_opt(
 
     Parameters
     ----------
-    M : array, shape=(n_sensors, n_times)
+         : array, shape=(n_sensors, n_times)
         Observation.
     G : array, shape=(n_sensors, n_sources)
         Forward operator.
@@ -530,6 +530,14 @@ def mce(L, y, alpha=0.2, n_orient=1, max_iter=1, max_iter_reweighting=10):
 
     return x
 
+def norm_l2inf(A, n_orient, copy=True):
+    from math import sqrt
+    """L2-inf norm."""
+    if A.size == 0:
+        return 0.0
+    if copy:
+        A = A.copy()
+    return sqrt(np.max(groups_norm2(A, n_orient)))
 
 def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweighting=10):
     """Iterative Type-I estimator with L1 regularizer.
@@ -578,9 +586,16 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         grp_norms = np.sqrt(groups_norm2(w.copy(), n_orient))
         return np.repeat(grp_norms, n_orient).ravel() + eps
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    if n_orient==1:
+        alpha_max = abs(L.T.dot(y)).max() / len(L)
+    else:      
+        n_dip_per_pos = 3
+        alpha_max = norm_l2inf(np.dot(L.T, y), n_dip_per_pos)
+        
     alpha = alpha * alpha_max
 
+    # y->M
+    # L->gain
     x = _solve_reweighted_lasso(
         L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
