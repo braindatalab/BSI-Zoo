@@ -248,6 +248,7 @@ def _gamma_map_opt(
     group_size=1,
     gammas=None,
     verbose=None,
+    learn_noise=False,
 ):
     """Hierarchical Bayes (Gamma-MAP).
 
@@ -355,6 +356,16 @@ def _gamma_map_opt(
             )
         else:
             raise ValueError("Invalid value for update_mode")
+
+        # noise learning for alpha
+        if learn_noise:
+            # update alpha using homoscedastic learning (using special case of heteroscedastic learning)
+            M_N = (
+                linalg.norm(M - np.dot(G, gammas[:, None] * A), ord="fro") ** 2
+                / n_times
+            )
+            Lambda = np.diag(np.sqrt(np.divide(M_N, CMinvG)))
+            alpha = np.mean(np.diag(Lambda))
 
         if group_size == 1:
             if denom is None:
@@ -950,6 +961,63 @@ def gamma_map(
         update_mode=update_mode,
         group_size=n_orient,
         verbose=verbose,
+    )
+    x_hat = np.zeros((L.shape[1], y.shape[1]))
+    x_hat[active_set] = x_hat_
+
+    if n_orient > 1:
+        x_hat = x_hat.reshape((-1, n_orient, x_hat.shape[1]))
+
+    return x_hat
+
+
+def gamma_map_homoscedastic(
+    L,
+    y,
+    cov=1.0,
+    alpha=0.2,
+    n_orient=1,
+    max_iter=1000,
+    tol=1e-15,
+    update_mode=2,
+    # threshold=1e-5,
+    gammas=None,
+    verbose=True,
+):
+    """Gammap map with homoscedastic noise learning.
+
+    Args:
+        L (_type_): _description_
+        y (_type_): _description_
+        cov (float, optional): _description_. Defaults to 1.0.
+        alpha (float, optional): _description_. Defaults to 0.2.
+        n_orient (int, optional): _description_. Defaults to 1.
+        max_iter (int, optional): _description_. Defaults to 1000.
+        tol (_type_, optional): _description_. Defaults to 1e-15.
+        update_mode (int, optional): _description_. Defaults to 2.
+        gammas (_type_, optional): _description_. Defaults to None.
+        verbose (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
+    if isinstance(cov, float):
+        cov = alpha * np.eye(L.shape[0])
+    # Take care of whitening
+    whitener = linalg.inv(linalg.sqrtm(cov))
+    y = whitener @ y
+    L = whitener @ L
+    x_hat_, active_set = _gamma_map_opt(
+        y,
+        L,
+        alpha=alpha,
+        tol=tol,
+        maxit=max_iter,
+        gammas=gammas,
+        update_mode=update_mode,
+        group_size=n_orient,
+        verbose=verbose,
+        learn_noise=True,
     )
     x_hat = np.zeros((L.shape[1], y.shape[1]))
     x_hat[active_set] = x_hat_
