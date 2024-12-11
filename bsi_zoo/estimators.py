@@ -594,10 +594,12 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         
     alpha = alpha * alpha_max
 
+    eigen_fields, sing, eigen_leads = _safe_svd(L, full_matrices=False)
+
     # y->M
     # L->gain
     x = _solve_reweighted_lasso(
-        L, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
+        eigen_leads, y, alpha, n_orient, weights, max_iter, max_iter_reweighting, gprime
     )
 
     return x
