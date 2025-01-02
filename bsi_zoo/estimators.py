@@ -597,6 +597,8 @@ def iterative_L1(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
 
     alpha = alpha * alpha_max
 
+    # eigen_fields, sing, eigen_leads = _safe_svd(L, full_matrices=False)
+
     # y->M
     # L->gain
     x = _solve_reweighted_lasso(
@@ -617,6 +619,7 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         w_i^(k+1) <-- [(x_i^(k))^2+epsilon]
     for solving the following problem:
         x^(k+1) <-- argmin_x ||y - Lx||^2_Fro + alpha * sum_i w_i^(k)|x_i|
+
 
     Parameters
     ----------
@@ -652,7 +655,12 @@ def iterative_L2(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweightin
         grp_norm2 = groups_norm2(w.copy(), n_orient)
         return np.repeat(grp_norm2, n_orient).ravel() + eps
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    if n_orient == 1:
+        alpha_max = abs(L.T.dot(y)).max() / len(L)
+    else:
+        n_dip_per_pos = 3
+        alpha_max = norm_l2inf(np.dot(L.T, y), n_dip_per_pos)
+
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
@@ -711,7 +719,12 @@ def iterative_sqrt(L, y, alpha=0.2, n_orient=1, max_iter=1000, max_iter_reweight
     def gprime(w):
         return 2.0 * np.repeat(g(w), n_orient).ravel()
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    if n_orient == 1:
+        alpha_max = abs(L.T.dot(y)).max() / len(L)
+    else:
+        n_dip_per_pos = 3
+        alpha_max = norm_l2inf(np.dot(L.T, y), n_dip_per_pos)
+
     alpha = alpha * alpha_max
 
     x = _solve_reweighted_lasso(
@@ -796,7 +809,12 @@ def iterative_L1_typeII(
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    if n_orient == 1:
+        alpha_max = abs(L.T.dot(y)).max() / len(L)
+    else:
+        n_dip_per_pos = 3
+        alpha_max = norm_l2inf(np.dot(L.T, y), n_dip_per_pos)
+
     alpha = alpha * alpha_max
 
     if isinstance(cov, float):
@@ -895,7 +913,12 @@ def iterative_L2_typeII(
     n_sensors, n_sources = L.shape
     weights = np.ones(n_sources)
 
-    alpha_max = abs(L.T.dot(y)).max() / len(L)
+    if n_orient == 1:
+        alpha_max = abs(L.T.dot(y)).max() / len(L)
+    else:
+        n_dip_per_pos = 3
+        alpha_max = norm_l2inf(np.dot(L.T, y), n_dip_per_pos)
+
     alpha = alpha * alpha_max
 
     if isinstance(cov, float):
